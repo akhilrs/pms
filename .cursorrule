@@ -1,0 +1,315 @@
+{
+  "project": {
+    "name": "project-management-app",
+    "description": "A Basecamp-like project management application built with Next.js, shadcn-ui, and Supabase",
+    "version": "1.0.0",
+    "repository": "https://github.com/yourusername/project-management-app"
+  },
+  "architecture": {
+    "frontend": {
+      "framework": "Next.js",
+      "styling": "Tailwind CSS",
+      "components": "shadcn-ui",
+      "stateManagement": "React Context API + React Query"
+    },
+    "backend": {
+      "api": "Next.js API Routes",
+      "database": "PostgreSQL via Supabase",
+      "authentication": "Supabase Auth",
+      "storage": "Supabase Storage",
+      "realtime": "Supabase Realtime"
+    },
+    "deployment": {
+      "hosting": "Vercel",
+      "database": "Supabase Cloud"
+    }
+  },
+  "conventions": {
+    "fileNaming": {
+      "components": "kebab-case.tsx",
+      "pages": "kebab-case.tsx",
+      "api": "kebab-case.ts",
+      "utils": "camelCase.ts"
+    },
+    "codeStyle": {
+      "indentation": 2,
+      "quotes": "single",
+      "semicolons": true,
+      "trailingComma": "es5"
+    },
+    "componentStructure": {
+      "atomic": true,
+      "styles": "Tailwind classes directly in JSX"
+    }
+  },
+  "folderStructure": {
+    "root": [
+      "components/",
+      "lib/",
+      "pages/",
+      "api/",
+      "styles/",
+      "types/",
+      "public/",
+      "prisma/"
+    ],
+    "components": {
+      "auth": ["login-form.tsx", "register-form.tsx", "auth-guard.tsx"],
+      "common": ["layout.tsx", "header.tsx", "sidebar.tsx", "loading.tsx"],
+      "projects": ["project-card.tsx", "project-list.tsx", "project-form.tsx", "project-detail.tsx", "project-members.tsx"],
+      "tasks": ["task-list.tsx", "task-card.tsx", "task-form.tsx", "task-detail.tsx"],
+      "files": ["file-list.tsx", "file-upload.tsx", "file-item.tsx"],
+      "messages": ["message-list.tsx", "message-form.tsx", "message-item.tsx"],
+      "reports": ["project-overview.tsx", "task-stats.tsx", "activity-feed.tsx"]
+    },
+    "lib": {
+      "supabase": ["client.ts", "auth.ts", "projects.ts", "tasks.ts", "files.ts", "messages.ts"],
+      "utils": ["date-utils.ts", "format-utils.ts", "validation.ts"]
+    },
+    "pages": {
+      "auth": ["login.tsx", "register.tsx"],
+      "projects": ["index.tsx", "new.tsx", "[id]/index.tsx", "[id]/edit.tsx", "[id]/tasks/index.tsx", "[id]/tasks/[taskId].tsx", "[id]/files.tsx", "[id]/messages.tsx", "[id]/reports.tsx"]
+    },
+    "api": {
+      "auth": ["login.ts", "register.ts", "logout.ts", "user.ts"],
+      "projects": ["index.ts", "[id].ts", "[id]/members.ts", "[id]/tasks.ts", "[id]/files.ts", "[id]/messages.ts", "[id]/reports.ts"],
+      "tasks": ["[id].ts", "[id]/comments.ts"],
+      "files": ["[id].ts"]
+    }
+  },
+  "dataModels": {
+    "User": {
+      "id": "UUID",
+      "email": "string",
+      "first_name": "string",
+      "last_name": "string",
+      "avatar_url": "string | null",
+      "created_at": "Date",
+      "updated_at": "Date"
+    },
+    "Project": {
+      "id": "UUID",
+      "name": "string",
+      "description": "string | null",
+      "status": "enum('Planning', 'In Progress', 'On Hold', 'Completed', 'Canceled')",
+      "start_date": "Date",
+      "end_date": "Date | null",
+      "owner_id": "UUID",
+      "created_at": "Date",
+      "updated_at": "Date"
+    },
+    "ProjectMember": {
+      "id": "UUID",
+      "project_id": "UUID",
+      "user_id": "UUID",
+      "role": "enum('owner', 'admin', 'member')",
+      "joined_at": "Date"
+    },
+    "Task": {
+      "id": "UUID",
+      "title": "string",
+      "description": "string | null",
+      "status": "enum('To Do', 'In Progress', 'Completed')",
+      "priority": "enum('Low', 'Medium', 'High')",
+      "due_date": "Date | null",
+      "project_id": "UUID",
+      "assignee_id": "UUID | null",
+      "creator_id": "UUID",
+      "created_at": "Date",
+      "updated_at": "Date"
+    },
+    "Comment": {
+      "id": "UUID",
+      "content": "string",
+      "task_id": "UUID",
+      "user_id": "UUID",
+      "created_at": "Date"
+    },
+    "File": {
+      "id": "UUID",
+      "name": "string",
+      "size": "number",
+      "mime_type": "string",
+      "storage_path": "string",
+      "project_id": "UUID",
+      "uploaded_by": "UUID",
+      "created_at": "Date"
+    },
+    "Message": {
+      "id": "UUID",
+      "content": "string",
+      "project_id": "UUID",
+      "user_id": "UUID",
+      "created_at": "Date"
+    },
+    "Activity": {
+      "id": "UUID",
+      "project_id": "UUID",
+      "user_id": "UUID",
+      "entity_type": "string",
+      "entity_id": "UUID",
+      "action": "string",
+      "details": "JSON | null",
+      "created_at": "Date"
+    }
+  },
+  "apiEndpoints": {
+    "auth": [
+      { "path": "/api/auth/login", "method": "POST", "description": "User login with email/password" },
+      { "path": "/api/auth/register", "method": "POST", "description": "Register a new user" },
+      { "path": "/api/auth/logout", "method": "POST", "description": "User logout" },
+      { "path": "/api/auth/user", "method": "GET", "description": "Get current user information" },
+      { "path": "/api/auth/user", "method": "PUT", "description": "Update user profile" }
+    ],
+    "projects": [
+      { "path": "/api/projects", "method": "GET", "description": "List projects for current user" },
+      { "path": "/api/projects", "method": "POST", "description": "Create new project" },
+      { "path": "/api/projects/:id", "method": "GET", "description": "Get project details" },
+      { "path": "/api/projects/:id", "method": "PUT", "description": "Update project" },
+      { "path": "/api/projects/:id", "method": "DELETE", "description": "Delete project" },
+      { "path": "/api/projects/:id/members", "method": "GET", "description": "List project members" },
+      { "path": "/api/projects/:id/members", "method": "POST", "description": "Add member to project" },
+      { "path": "/api/projects/:id/members/:userId", "method": "DELETE", "description": "Remove project member" }
+    ],
+    "tasks": [
+      { "path": "/api/projects/:id/tasks", "method": "GET", "description": "List tasks for project" },
+      { "path": "/api/projects/:id/tasks", "method": "POST", "description": "Create new task" },
+      { "path": "/api/tasks/:id", "method": "GET", "description": "Get task details" },
+      { "path": "/api/tasks/:id", "method": "PUT", "description": "Update task" },
+      { "path": "/api/tasks/:id", "method": "DELETE", "description": "Delete task" },
+      { "path": "/api/tasks/:id/comments", "method": "POST", "description": "Add comment to task" },
+      { "path": "/api/tasks/:id/comments", "method": "GET", "description": "Get task comments" }
+    ],
+    "files": [
+      { "path": "/api/projects/:id/files", "method": "GET", "description": "List files for project" },
+      { "path": "/api/projects/:id/files", "method": "POST", "description": "Upload file" },
+      { "path": "/api/files/:id", "method": "GET", "description": "Get file details" },
+      { "path": "/api/files/:id", "method": "DELETE", "description": "Delete file" }
+    ],
+    "messages": [
+      { "path": "/api/projects/:id/messages", "method": "GET", "description": "List messages for project" },
+      { "path": "/api/projects/:id/messages", "method": "POST", "description": "Create new message" },
+      { "path": "/api/messages/:id", "method": "PUT", "description": "Update message" },
+      { "path": "/api/messages/:id", "method": "DELETE", "description": "Delete message" }
+    ],
+    "reports": [
+      { "path": "/api/projects/:id/reports/overview", "method": "GET", "description": "Get project overview statistics" },
+      { "path": "/api/projects/:id/reports/tasks", "method": "GET", "description": "Get task statistics" },
+      { "path": "/api/projects/:id/reports/activities", "method": "GET", "description": "Get recent activities" }
+    ]
+  },
+  "implementationPlan": {
+    "week1": {
+      "days1-2": ["Setup & Authentication"],
+      "days3-4": ["Projects & Dashboard"],
+      "days5-7": ["Task Management"]
+    },
+    "week2": {
+      "days8-9": ["File Management & Messages"],
+      "days10-11": ["Reporting & Activity Tracking"],
+      "days12-14": ["Testing, Fixing & Deployment"]
+    }
+  },
+  "supabaseQueries": {
+    "auth": [
+      "supabase.auth.signInWithPassword({ email, password })",
+      "supabase.auth.signUp({ email, password, options })",
+      "supabase.auth.getSession()"
+    ],
+    "projects": [
+      "supabase.from('projects').select(...).or(`owner_id.eq.${userId},id.in.(${memberProjectIds.join(',')})`)...",
+      "supabase.from('projects').insert({ name, description, owner_id })...",
+      "supabase.from('projects').select(...).eq('id', projectId).single()"
+    ],
+    "tasks": [
+      "supabase.from('tasks').select(...).eq('project_id', projectId)...",
+      "supabase.from('tasks').insert({ title, description, status, project_id, creator_id })...",
+      "supabase.from('tasks').update({ status }).eq('id', taskId)..."
+    ],
+    "files": [
+      "supabase.storage.from('project-files').upload(`${projectId}/${fileName}`, fileData, { contentType })",
+      "supabase.from('files').insert({ name, size, mime_type, storage_path, project_id, uploaded_by })...",
+      "supabase.storage.from('project-files').getPublicUrl(filePath)"
+    ],
+    "realtime": [
+      "supabase.channel('tasks').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tasks' }, (payload) => {...}).subscribe()"
+    ]
+  },
+  "dependencies": {
+    "core": [
+      "next",
+      "react", 
+      "react-dom", 
+      "@supabase/supabase-js",
+      "typescript",
+      "tailwindcss"
+    ],
+    "ui": [
+      "@radix-ui/react-alert-dialog",
+      "@radix-ui/react-avatar",
+      "@radix-ui/react-checkbox",
+      "@radix-ui/react-dialog",
+      "@radix-ui/react-dropdown-menu",
+      "@radix-ui/react-label",
+      "@radix-ui/react-popover",
+      "@radix-ui/react-select",
+      "@radix-ui/react-slot",
+      "@radix-ui/react-toast",
+      "class-variance-authority",
+      "clsx",
+      "lucide-react",
+      "tailwind-merge",
+      "tailwindcss-animate"
+    ],
+    "utils": [
+      "date-fns",
+      "react-hook-form",
+      "zod",
+      "@hookform/resolvers",
+      "react-query",
+      "nanoid",
+      "formidable"
+    ],
+    "devDependencies": [
+      "eslint",
+      "prettier",
+      "@types/react",
+      "@types/node",
+      "autoprefixer",
+      "postcss"
+    ]
+  },
+  "styleGuide": {
+    "colors": {
+      "primary": "#0ea5e9",
+      "secondary": "#6366f1",
+      "accent": "#22c55e",
+      "background": "#ffffff",
+      "text": "#334155",
+      "error": "#ef4444",
+      "warning": "#f59e0b",
+      "success": "#10b981"
+    },
+    "typography": {
+      "fontFamily": "Inter, system-ui, sans-serif",
+      "headings": {
+        "fontWeight": "600"
+      },
+      "body": {
+        "fontSize": "16px",
+        "lineHeight": "1.5"
+      }
+    },
+    "spacing": {
+      "unit": "4px",
+      "scale": [0, 1, 2, 3, 4, 5, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48, 64, 80, 96]
+    },
+    "breakpoints": {
+      "sm": "640px",
+      "md": "768px",
+      "lg": "1024px",
+      "xl": "1280px",
+      "2xl": "1536px"
+    }
+  }
+}
