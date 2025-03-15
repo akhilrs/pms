@@ -1,5 +1,10 @@
+networks:
+  supabase_network:
+    driver: bridge
+
 services:
   postgres:
+    container_name: supabase-postgres
     image: postgres:15
     ports:
       - 5432:5432
@@ -15,20 +20,29 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    restart: unless-stopped
+    networks:
+      - supabase_network
 
   supabase-studio:
+    container_name: supabase-studio
     image: supabase/studio:latest
     ports:
-      - 3030:3000
+      - 3000:3000
     environment:
       SUPABASE_URL: http://supabase-kong:8000
       SUPABASE_REST_URL: http://supabase-kong:8000/rest/v1/
-      SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
-      SUPABASE_SERVICE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:-catering-subsonic8-sappy-pedicure-deferred}
+      SUPABASE_SERVICE_KEY: ${SUPABASE_SERVICE_KEY:-backed-playroom-tannery-certified5-wound}
     depends_on:
-      - supabase-kong
+      supabase-kong:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - supabase_network
 
   supabase-kong:
+    container_name: supabase-kong
     image: kong:2.8.1
     ports:
       - 8000:8000
@@ -42,24 +56,41 @@ services:
       bash -c "kong start"
     restart: unless-stopped
     depends_on:
-      - rest
-    container_name: supabase-kong
+      rest:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "kong", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - supabase_network
 
   rest:
+    container_name: supabase-rest
     image: postgrest/postgrest:v10.1.2
     ports:
-      - 3030
+      - 3001:3000
     environment:
       PGRST_DB_URI: postgres://postgres:postgres@postgres:5432/postgres
       PGRST_DB_SCHEMA: public,storage
       PGRST_DB_ANON_ROLE: anon
-      PGRST_JWT_SECRET: super-secret-jwt-token-with-at-least-32-characters-long
+      PGRST_JWT_SECRET: ${JWT_SECRET:-blatancy4-racism-remark}
       PGRST_DB_USE_LEGACY_GUCS: "false"
     depends_on:
       postgres:
         condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - supabase_network
 
   auth:
+    container_name: supabase-auth
     image: supabase/gotrue:v2.35.0
     ports:
       - 9999:9999
@@ -69,7 +100,7 @@ services:
       GOTRUE_DB_DRIVER: postgres
       GOTRUE_DB_DATABASE_URL: postgres://postgres:postgres@postgres:5432/postgres?sslmode=disable
       GOTRUE_SITE_URL: http://localhost:3000
-      GOTRUE_JWT_SECRET: super-secret-jwt-token-with-at-least-32-characters-long
+      GOTRUE_JWT_SECRET: ${JWT_SECRET:-blatancy4-racism-remark}
       GOTRUE_JWT_EXP: 3600
       GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
       GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
@@ -83,11 +114,9 @@ services:
       GOTRUE_MAILER_URLPATHS_INVITE: "/auth/v1/verify"
       GOTRUE_MAILER_AUTOCONFIRM: "true"
       GOTRUE_LOG_LEVEL: debug
-      GOTRUE_OPERATOR_TOKEN: super-secret-operator-token
+      GOTRUE_OPERATOR_TOKEN: ${OPERATOR_TOKEN:-t-shirt6-daunting-referee-bulginess-whacky}
       DATABASE_URL: postgres://postgres:postgres@postgres:5432/postgres?sslmode=disable
-      # Set the namespace for GoTrue to use auth schema
       GOTRUE_DB_NAMESPACE: "public"
-      # Add API endpoint configuration
       API_EXTERNAL_URL: http://localhost:8000
       GOTRUE_URI_ALLOW_LIST: "localhost:3000,localhost:8000"
       GOTRUE_DISABLE_SIGNUP: "false"
@@ -96,38 +125,82 @@ services:
         condition: service_healthy
       mailhog:
         condition: service_started
-
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:9999/health",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - supabase_network
   storage:
-    image: supabase/storage-api:v0.23.0
-    ports:
-      - 15000:5000
+    container_name: supabase-storage
+    image: supabase/storage-api:v1.19.3
+    restart: unless-stopped
+    volumes:
+      - ./volumes/storage:/var/lib/storage:z
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://storage:5000/status",
+        ]
+      timeout: 5s
+      interval: 5s
+      retries: 3
+    depends_on:
+      postgres:
+        # Disable this if you are using an external Postgres database
+        condition: service_healthy
+      rest:
+        condition: service_started
     environment:
-      ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
-      SERVICE_ROLE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
-      PROJECT_REF: defaultproject
-      POSTGRES_CONNECTION: postgres://postgres:postgres@postgres:5432/postgres
-      REGION: us-east-1
-      GLOBAL_S3_BUCKET: defaultbucket
-      TENANT_ID: stub
-      PGRST_JWT_SECRET: super-secret-jwt-token-with-at-least-32-characters-long
+      ANON_KEY: ${SUPABASE_ANON_KEY:-catering-subsonic8-sappy-pedicure-deferred}
+      SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_KEY:-backed-playroom-tannery-certified5-wound}
+      POSTGREST_URL: http://rest:3000
+      PGRST_JWT_SECRET: ${JWT_SECRET}
       DATABASE_URL: postgres://postgres:postgres@postgres:5432/postgres
       FILE_SIZE_LIMIT: 52428800
       STORAGE_BACKEND: file
       FILE_STORAGE_BACKEND_PATH: /var/lib/storage
-      TENANT_SCHEMA: storage
-      DISABLE_SLS: "true"
-    volumes:
-      - storage_data:/var/lib/storage
-    depends_on:
-      postgres:
-        condition: service_healthy
+      TENANT_ID: stub
+      # TODO: https://github.com/supabase/storage-api/issues/55
+      REGION: stub
+      GLOBAL_S3_BUCKET: stub
+      ENABLE_IMAGE_TRANSFORMATION: "true"
+      IMGPROXY_URL: http://imgproxy:5001
+    networks:
+      - supabase_network
 
   mailhog:
+    container_name: supabase-mailhog
     image: mailhog/mailhog
     ports:
       - 8025:8025
       - 1025:1025
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "8025"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - supabase_network
 
 volumes:
   postgres_data:
+    name: supabase-postgres-data
   storage_data:
+    name: supabase-storage-data

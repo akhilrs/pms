@@ -15,8 +15,8 @@ export interface UserProfile {
 export interface SignUpCredentials {
   email: string;
   password: string;
-  first_name: string;
-  last_name: string;
+  first_name?: string;
+  last_name?: string;
 }
 
 export interface SignInCredentials {
@@ -26,45 +26,39 @@ export interface SignInCredentials {
 
 export async function signUp({ email, password, first_name, last_name }: SignUpCredentials) {
   try {
-    console.log('Starting signup process with custom API...', { email });
+    console.log('Starting signup process with Supabase...', { email });
     
-    // Ensure all data is properly formatted to avoid JSON issues
-    const userData = {
-      email: String(email).trim(),
-      password: String(password),
-      first_name: first_name ? String(first_name).trim() : '',
-      last_name: last_name ? String(last_name).trim() : ''
-    };
-    
-    console.log('Sending signup data:', {
-      ...userData,
-      password: '[REDACTED]'
+    // Use Supabase auth directly
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          first_name,
+          last_name
+        }
+      }
     });
     
-    // Use our custom API endpoint instead of Supabase auth directly
-    const response = await fetch('/api/auth/signup', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(userData)
-    });
-    
-    const responseData = await response.json();
-    console.log('Signup API response status:', response.status);
-    
-    if (!response.ok) {
-      const errorMessage = responseData.details || responseData.error || 'Failed to sign up';
-      const error = new Error(errorMessage);
-      console.error('Custom auth.signUp error:', error);
+    if (error) {
+      console.error('Supabase auth.signUp error:', error);
       throw error;
     }
 
-    const { user, session } = responseData;
-    console.log('Signup successful, user data:', user);
+    console.log('Signup successful', data);
+    
+    // Create profile in database if signup was successful
+    if (data.user) {
+      try {
+        const profile = await createUserProfile(data.user.id, first_name, last_name);
+        console.log('Profile created:', profile);
+      } catch (profileError) {
+        // Don't fail the signup if profile creation fails
+        console.error('Failed to create profile:', profileError);
+      }
+    }
 
-    // Profile is now created in the backend, no need to create it here
-    return { user, session };
+    return data;
   } catch (error) {
     console.error('Exception during signup process:', error);
     throw error;
@@ -73,39 +67,21 @@ export async function signUp({ email, password, first_name, last_name }: SignUpC
 
 export async function signIn({ email, password }: SignInCredentials) {
   try {
-    console.log('Starting signin process with custom API...', { email });
+    console.log('Starting signin process with Supabase...', { email });
     
-    // Ensure all data is properly formatted to avoid JSON issues
-    const userData = {
-      email: String(email).trim(),
-      password: String(password)
-    };
-    
-    console.log('Sending signin data:', {
-      ...userData,
-      password: '[REDACTED]'
+    // Use Supabase auth directly
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
     });
     
-    // Use our custom API endpoint instead of Supabase auth directly
-    const response = await fetch('/api/auth/signin', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(userData)
-    });
-    
-    const responseData = await response.json();
-    console.log('Signin API response status:', response.status);
-    
-    if (!response.ok) {
-      const errorMessage = responseData.details || responseData.error || 'Failed to sign in';
-      const error = new Error(errorMessage);
-      console.error('Custom auth.signIn error:', error);
+    if (error) {
+      console.error('Supabase auth.signIn error:', error);
       throw error;
     }
 
-    return responseData;
+    console.log('Signin successful', data);
+    return data;
   } catch (error) {
     console.error('Exception during signin process:', error);
     throw error;
@@ -113,47 +89,56 @@ export async function signIn({ email, password }: SignInCredentials) {
 }
 
 export async function signOut() {
-  const { error } = await supabase.auth.signOut();
-  if (error) {
+  try {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error('Supabase auth.signOut error:', error);
+      throw error;
+    }
+    console.log('Signout successful');
+  } catch (error) {
+    console.error('Exception during signout process:', error);
     throw error;
   }
 }
 
 export async function getCurrentUser() {
   try {
-    // Use our custom session endpoint instead of Supabase
-    const response = await fetch('/api/auth/session', {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+    const { data: { user }, error } = await supabase.auth.getUser();
     
-    const data = await response.json();
-    
-    // If we have a user in the response, return it
-    if (data.user) {
-      return data.user;
-    }
-    
-    // Fallback to Supabase check if our custom session endpoint didn't find a user
-    try {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      
-      if (error) {
-        console.warn('Error getting Supabase session:', error);
-        return null;
-      }
-      
-      return session?.user || null;
-    } catch (supabaseError) {
-      console.error('Error checking Supabase session:', supabaseError);
+    if (error) {
+      console.warn('Error getting user:', error);
       return null;
     }
+    
+    return user;
   } catch (error) {
     console.error('Error checking session:', error);
     return null;
   }
+}
+
+// Helper function to create a user profile
+async function createUserProfile(userId: string, first_name?: string, last_name?: string) {
+  const { data, error } = await supabase
+    .from('profiles')
+    .insert([
+      {
+        id: userId,
+        first_name: first_name || null,
+        last_name: last_name || null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+    ])
+    .select()
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
 }
 
 export async function getUserProfile(userId: string) {

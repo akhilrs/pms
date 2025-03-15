@@ -1,3 +1,93 @@
+#!/bin/bash
+
+# Load environment variables from .env if it exists
+if [ -f ".env" ]; then
+  echo "Loading environment variables from .env file"
+  export $(grep -v '^#' .env | xargs)
+fi
+
+# Set default values if environment variables are not set
+SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0}
+SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU}
+JWT_SECRET=${JWT_SECRET:-super-secret-jwt-token-with-at-least-32-characters-long}
+OPERATOR_TOKEN=${OPERATOR_TOKEN:-super-secret-operator-token}
+
+echo "Using the following configuration:"
+echo "SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:0:10}... (truncated)"
+echo "SUPABASE_SERVICE_KEY: ${SUPABASE_SERVICE_KEY:0:10}... (truncated)"
+echo "JWT_SECRET: ${JWT_SECRET:0:10}... (truncated)"
+
+# 1. Create directories
+mkdir -p kong
+mkdir -p initdb
+
+# 2. Create Kong configuration
+cat > kong/kong.yml << EOF
+_format_version: "1.1"
+services:
+  - name: rest
+    url: http://rest:3000
+    routes:
+      - name: rest-all
+        paths:
+          - /rest
+    plugins:
+      - name: cors
+      - name: key-auth
+        config:
+          hide_credentials: true
+      - name: acl
+        config:
+          hide_groups_header: true
+          allow:
+            - anon
+            - authenticated
+            - service_role
+  - name: auth
+    url: http://auth:9999
+    routes:
+      - name: auth-all
+        paths:
+          - /auth
+    plugins:
+      - name: cors
+  - name: storage
+    url: http://storage:5000
+    routes:
+      - name: storage-all
+        paths:
+          - /storage
+    plugins:
+      - name: cors
+      - name: key-auth
+        config:
+          hide_credentials: true
+      - name: acl
+        config:
+          hide_groups_header: true
+          allow:
+            - anon
+            - authenticated
+            - service_role
+consumers:
+  - username: anon
+    keyauth_credentials:
+      - key: $SUPABASE_ANON_KEY
+    acls:
+      - group: anon
+  - username: service_role
+    keyauth_credentials:
+      - key: $SUPABASE_SERVICE_KEY
+    acls:
+      - group: service_role
+EOF
+
+# 3. Create storage initialization script
+
+# 4. Create docker-compose.yml file
+cat > docker-compose.yml << EOF
+version: '3.8'
+
 networks:
   supabase_network:
     driver: bridge
@@ -32,8 +122,8 @@ services:
     environment:
       SUPABASE_URL: http://supabase-kong:8000
       SUPABASE_REST_URL: http://supabase-kong:8000/rest/v1/
-      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:-catering-subsonic8-sappy-pedicure-deferred}
-      SUPABASE_SERVICE_KEY: ${SUPABASE_SERVICE_KEY:-backed-playroom-tannery-certified5-wound}
+      SUPABASE_ANON_KEY: \${SUPABASE_ANON_KEY:-$SUPABASE_ANON_KEY}
+      SUPABASE_SERVICE_KEY: \${SUPABASE_SERVICE_KEY:-$SUPABASE_SERVICE_KEY}
     depends_on:
       supabase-kong:
         condition: service_started
@@ -75,7 +165,7 @@ services:
       PGRST_DB_URI: postgres://postgres:postgres@postgres:5432/postgres
       PGRST_DB_SCHEMA: public,storage
       PGRST_DB_ANON_ROLE: anon
-      PGRST_JWT_SECRET: ${JWT_SECRET:-blatancy4-racism-remark}
+      PGRST_JWT_SECRET: \${JWT_SECRET:-$JWT_SECRET}
       PGRST_DB_USE_LEGACY_GUCS: "false"
     depends_on:
       postgres:
@@ -100,7 +190,7 @@ services:
       GOTRUE_DB_DRIVER: postgres
       GOTRUE_DB_DATABASE_URL: postgres://postgres:postgres@postgres:5432/postgres?sslmode=disable
       GOTRUE_SITE_URL: http://localhost:3000
-      GOTRUE_JWT_SECRET: ${JWT_SECRET:-blatancy4-racism-remark}
+      GOTRUE_JWT_SECRET: \${JWT_SECRET:-$JWT_SECRET}
       GOTRUE_JWT_EXP: 3600
       GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
       GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
@@ -114,7 +204,7 @@ services:
       GOTRUE_MAILER_URLPATHS_INVITE: "/auth/v1/verify"
       GOTRUE_MAILER_AUTOCONFIRM: "true"
       GOTRUE_LOG_LEVEL: debug
-      GOTRUE_OPERATOR_TOKEN: ${OPERATOR_TOKEN:-t-shirt6-daunting-referee-bulginess-whacky}
+      GOTRUE_OPERATOR_TOKEN: \${OPERATOR_TOKEN:-$OPERATOR_TOKEN}
       DATABASE_URL: postgres://postgres:postgres@postgres:5432/postgres?sslmode=disable
       GOTRUE_DB_NAMESPACE: "public"
       API_EXTERNAL_URL: http://localhost:8000
@@ -127,62 +217,47 @@ services:
         condition: service_started
     restart: unless-stopped
     healthcheck:
-      test:
-        [
-          "CMD",
-          "wget",
-          "--no-verbose",
-          "--tries=1",
-          "--spider",
-          "http://localhost:9999/health",
-        ]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9999/health"]
       interval: 10s
       timeout: 5s
       retries: 3
     networks:
       - supabase_network
+
   storage:
     container_name: supabase-storage
     image: supabase/storage-api:v1.19.3
-    restart: unless-stopped
-    volumes:
-      - ./volumes/storage:/var/lib/storage:z
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "wget",
-          "--no-verbose",
-          "--tries=1",
-          "--spider",
-          "http://storage:5000/status",
-        ]
-      timeout: 5s
-      interval: 5s
-      retries: 3
-    depends_on:
-      postgres:
-        # Disable this if you are using an external Postgres database
-        condition: service_healthy
-      rest:
-        condition: service_started
-      imgproxy:
-        condition: service_started
+    ports:
+      - 15000:5000
     environment:
-      ANON_KEY: ${SUPABASE_ANON_KEY:-catering-subsonic8-sappy-pedicure-deferred}
-      SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_KEY:-backed-playroom-tannery-certified5-wound}
-      POSTGREST_URL: http://rest:3000
-      PGRST_JWT_SECRET: ${JWT_SECRET}
+      ANON_KEY: \${SUPABASE_ANON_KEY:-$SUPABASE_ANON_KEY}
+      SERVICE_ROLE_KEY: \${SUPABASE_SERVICE_KEY:-$SUPABASE_SERVICE_KEY}
+      SERVICE_KEY: \${SUPABASE_SERVICE_KEY:-$SUPABASE_SERVICE_KEY}
+      PROJECT_REF: defaultproject
+      POSTGRES_CONNECTION: postgres://postgres:postgres@postgres:5432/postgres
+      REGION: us-east-1
+      GLOBAL_S3_BUCKET: defaultbucket
+      TENANT_ID: stub
+      PGRST_JWT_SECRET: \${JWT_SECRET:-$JWT_SECRET}
       DATABASE_URL: postgres://postgres:postgres@postgres:5432/postgres
+      POSTGREST_URL: http://rest:3000
       FILE_SIZE_LIMIT: 52428800
       STORAGE_BACKEND: file
       FILE_STORAGE_BACKEND_PATH: /var/lib/storage
-      TENANT_ID: stub
-      # TODO: https://github.com/supabase/storage-api/issues/55
-      REGION: stub
-      GLOBAL_S3_BUCKET: stub
-      ENABLE_IMAGE_TRANSFORMATION: "true"
-      IMGPROXY_URL: http://imgproxy:5001
+      TENANT_SCHEMA: storage
+      DISABLE_SLS: "true"
+      STORAGE_MIGRATIONS_SKIP_VERIFICATION: "true"
+    volumes:
+      - storage_data:/var/lib/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
     networks:
       - supabase_network
 
@@ -206,3 +281,16 @@ volumes:
     name: supabase-postgres-data
   storage_data:
     name: supabase-storage-data
+EOF
+
+# 5. Restart containers
+echo "Stopping existing containers and removing volumes..."
+podman compose down -v
+
+echo "Starting Supabase containers..."
+podman compose up -d
+
+echo "Supabase setup complete!"
+echo "Allow a few moments for all services to start up."
+echo "You can check container logs with: podman compose logs -f <service-name>"
+echo "Access Supabase Studio at: http://localhost:3000"
