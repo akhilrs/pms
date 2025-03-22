@@ -1,20 +1,29 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { signIn } from '@/lib/supabase/auth';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { toast } from 'sonner';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { signIn } from "@/lib/supabase/auth";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { toast } from "sonner";
 
 const loginSchema = z.object({
-  email: z.string().email({ message: 'Please enter a valid email address' }),
-  password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
+  email: z.string().email({ message: "Please enter a valid email address" }),
+  password: z
+    .string()
+    .min(6, { message: "Password must be at least 6 characters" }),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -22,7 +31,8 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 export function LoginForm() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
-  
+  const [error, setError] = useState<string | null>(null);
+
   const {
     register,
     handleSubmit,
@@ -30,26 +40,38 @@ export function LoginForm() {
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: '',
-      password: '',
+      email: "",
+      password: "",
     },
   });
 
   const onSubmit = async (data: LoginFormValues) => {
     setIsLoading(true);
-    
+    setError(null);
+
     try {
-      await signIn({
+      // Sign in with Supabase
+      const result = await signIn({
         email: data.email,
         password: data.password,
       });
-      
-      toast.success('Logged in successfully');
-      router.push('/dashboard');
+
+      console.log("Supabase auth successful:", result);
+
+      // Show success message
+      toast.success("Logged in successfully");
+
+      // Force a refresh to update auth state across the app
       router.refresh();
-    } catch (error) {
-      console.error('Login error:', error);
-      toast.error('Failed to login. Please check your credentials.');
+
+      // Redirect to dashboard page instead of projects
+      router.push("/dashboard");
+    } catch (error: any) {
+      console.error("Login error:", error);
+      setError(
+        error.message || "Failed to login. Please check your credentials.",
+      );
+      toast.error("Failed to login. Please check your credentials.");
     } finally {
       setIsLoading(false);
     }
@@ -71,7 +93,7 @@ export function LoginForm() {
               id="email"
               type="email"
               placeholder="name@example.com"
-              {...register('email')}
+              {...register("email")}
             />
             {errors.email && (
               <p className="text-sm text-red-500">{errors.email.message}</p>
@@ -83,20 +105,27 @@ export function LoginForm() {
               id="password"
               type="password"
               placeholder="••••••••"
-              {...register('password')}
+              {...register("password")}
             />
             {errors.password && (
               <p className="text-sm text-red-500">{errors.password.message}</p>
             )}
           </div>
+
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-md text-red-600 text-sm">
+              {error}
+            </div>
+          )}
+
           <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? 'Logging in...' : 'Login'}
+            {isLoading ? "Logging in..." : "Login"}
           </Button>
         </form>
       </CardContent>
       <CardFooter className="flex justify-center">
         <p className="text-sm text-gray-500">
-          Don&apos;t have an account?{' '}
+          Don&apos;t have an account?{" "}
           <a
             href="/auth/register"
             className="text-blue-500 hover:text-blue-700 font-medium"
@@ -107,4 +136,5 @@ export function LoginForm() {
       </CardFooter>
     </Card>
   );
-} 
+}
+

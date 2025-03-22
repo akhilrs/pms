@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
-import { getCurrentUser } from '@/lib/supabase/auth';
+import { useEffect, useState } from "react";
+import { useRouter, usePathname } from "next/navigation";
+import { getCurrentUser } from "@/lib/supabase/auth";
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -10,8 +10,8 @@ interface AuthGuardProps {
 
 // Paths that don't require authentication
 const publicPaths = [
-  '/auth-test',
-  '/api/auth/test-urls',
+  "/auth-test",
+  "/api/auth/test-urls",
   // Add other public paths here as needed
 ];
 
@@ -24,19 +24,22 @@ export function AuthGuard({ children }: AuthGuardProps) {
     async function checkAuth() {
       try {
         const user = await getCurrentUser();
-        
+
         // Check if current path is public or starts with /auth/
-        const isPublicPath = publicPaths.some(path => pathname === path || pathname.startsWith(path));
-        
+        const isPublicPath = publicPaths.some(
+          (path) => pathname === path || pathname.startsWith(path),
+        );
+
         // If no user and not on auth pages or public paths, redirect to login
-        if (!user && !pathname.startsWith('/auth/') && !isPublicPath) {
-          router.push('/auth/login');
+        if (!user && !pathname.startsWith("/auth/") && !isPublicPath) {
+          console.log("AuthGuard: No authenticated user, redirecting to login");
+          router.push("/auth/login");
         } else {
           setIsLoading(false);
         }
       } catch (error) {
-        console.error('Auth check error:', error);
-        router.push('/auth/login');
+        console.error("Auth check error:", error);
+        router.push("/auth/login");
       }
     }
 
@@ -45,8 +48,10 @@ export function AuthGuard({ children }: AuthGuardProps) {
 
   // Show loading state while checking authentication
   // Don't show loading for auth pages or public paths
-  const isPublicPath = publicPaths.some(path => pathname === path || pathname.startsWith(path));
-  if (isLoading && !pathname.startsWith('/auth/') && !isPublicPath) {
+  const isPublicPath = publicPaths.some(
+    (path) => pathname === path || pathname.startsWith(path),
+  );
+  if (isLoading && !pathname.startsWith("/auth/") && !isPublicPath) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
@@ -55,4 +60,5 @@ export function AuthGuard({ children }: AuthGuardProps) {
   }
 
   return <>{children}</>;
-} 
+}
+

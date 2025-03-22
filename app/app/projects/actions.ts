@@ -1,60 +1,102 @@
-'use server';
+"use server";
 
-import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
-import { createProject, updateProject, deleteProject } from '@/lib/supabase/projects';
-import type { ProjectFormValues } from '@/components/projects/project-form';
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
+import { supabase } from "@/lib/supabase/client";
+import {
+  createProject,
+  updateProject,
+  deleteProject,
+} from "@/lib/supabase/projects";
+import type { ProjectFormValues } from "@/components/projects/project-form";
 
 /**
  * Create a new project
  */
 export async function createProjectAction(formData: ProjectFormValues) {
-  const supabase = createClient();
-  
-  // Get current user
-  const { data: { session } } = await supabase.auth.getSession();
-  const userId = session?.user?.id;
-  
-  if (!userId) {
-    throw new Error('User not authenticated');
+  try {
+    // Get current user from session
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    let userId = session?.user?.id;
+
+    // If no session is found, try to get it from cookies
+    if (!userId) {
+      console.log("No user session found, attempting to get from cookies...");
+
+      // Using server-side auth check instead of cookies directly
+      const { data, error } = await supabase.auth.getUser();
+
+      if (error || !data.user) {
+        console.error("Failed to get user from auth.getUser():", error);
+        throw new Error("User not authenticated");
+      }
+
+      userId = data.user.id;
+      console.log(
+        "Successfully retrieved user ID from auth.getUser():",
+        userId,
+      );
+    }
+
+    if (!userId) {
+      throw new Error("User not authenticated");
+    }
+
+    // Create project
+    const { data: project, error } = await createProject({
+      name: formData.name,
+      description: formData.description || null,
+      status: formData.status,
+      start_date: formData.start_date,
+      end_date: formData.end_date || null,
+      owner_id: userId,
+    });
+
+    if (error) {
+      console.error("Project creation error:", error);
+      throw new Error(`Failed to create project: ${error.message}`);
+    }
+
+    // Revalidate projects path
+    revalidatePath("/projects");
+
+    // Redirect to project page
+    redirect(`/projects/${project.id}`);
+  } catch (error) {
+    console.error("Project creation action error:", error);
+    throw error;
   }
-  
-  // Create project
-  const { data: project, error } = await createProject({
-    name: formData.name,
-    description: formData.description || null,
-    status: formData.status,
-    start_date: formData.start_date,
-    end_date: formData.end_date || null,
-    owner_id: userId,
-  });
-  
-  if (error) {
-    throw new Error(`Failed to create project: ${error.message}`);
-  }
-  
-  // Revalidate projects path
-  revalidatePath('/projects');
-  
-  // Redirect to project page
-  redirect(`/projects/${project.id}`);
 }
 
 /**
  * Update an existing project
  */
-export async function updateProjectAction(projectId: string, formData: ProjectFormValues) {
-  const supabase = createClient();
-  
+export async function updateProjectAction(
+  projectId: string,
+  formData: ProjectFormValues,
+) {
   // Get current user
-  const { data: { session } } = await supabase.auth.getSession();
-  const userId = session?.user?.id;
-  
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  let userId = session?.user?.id;
+
+  // If no session is found, try to get it from server-side auth
   if (!userId) {
-    throw new Error('User not authenticated');
+    const { data, error } = await supabase.auth.getUser();
+    if (error || !data.user) {
+      throw new Error("User not authenticated");
+    }
+    userId = data.user.id;
   }
-  
+
+  if (!userId) {
+    throw new Error("User not authenticated");
+  }
+
   // Update project
   const { data: project, error } = await updateProject(projectId, {
     name: formData.name,
@@ -63,15 +105,15 @@ export async function updateProjectAction(projectId: string, formData: ProjectFo
     start_date: formData.start_date,
     end_date: formData.end_date || null,
   });
-  
+
   if (error) {
     throw new Error(`Failed to update project: ${error.message}`);
   }
-  
+
   // Revalidate project paths
-  revalidatePath('/projects');
+  revalidatePath("/projects");
   revalidatePath(`/projects/${projectId}`);
-  
+
   return { success: true, project };
 }
 
@@ -79,26 +121,36 @@ export async function updateProjectAction(projectId: string, formData: ProjectFo
  * Delete a project
  */
 export async function deleteProjectAction(projectId: string) {
-  const supabase = createClient();
-  
   // Get current user
-  const { data: { session } } = await supabase.auth.getSession();
-  const userId = session?.user?.id;
-  
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  let userId = session?.user?.id;
+
+  // If no session is found, try to get it from server-side auth
   if (!userId) {
-    throw new Error('User not authenticated');
+    const { data, error } = await supabase.auth.getUser();
+    if (error || !data.user) {
+      throw new Error("User not authenticated");
+    }
+    userId = data.user.id;
   }
-  
+
+  if (!userId) {
+    throw new Error("User not authenticated");
+  }
+
   // Delete project
   const { error } = await deleteProject(projectId);
-  
+
   if (error) {
     throw new Error(`Failed to delete project: ${error.message}`);
   }
-  
+
   // Revalidate projects path
-  revalidatePath('/projects');
-  
+  revalidatePath("/projects");
+
   // Redirect to projects page
-  redirect('/projects');
-} 
+  redirect("/projects");
+}
+

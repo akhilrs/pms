@@ -6,8 +6,9 @@ import { BarChart, CheckSquare, Clock, PlusCircle, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ProjectCard } from '@/components/projects/project-card';
 import { getUserProjects } from '@/lib/supabase/projects';
-import { createClient } from '@/lib/supabase/client';
+import { supabase, getServiceSupabase } from '@/lib/supabase/client';
 import { Badge } from '@/components/ui/badge';
+import { getServerSession } from '@/lib/supabase/server-auth';
 
 export const metadata: Metadata = {
   title: 'Dashboard | Basecamp Clone',
@@ -15,16 +16,44 @@ export const metadata: Metadata = {
 };
 
 export default async function DashboardPage() {
-  const supabase = createClient();
+  // Get current user with enhanced session detection
+  let userId: string | undefined;
   
-  // Get current user
-  const { data: { session } } = await supabase.auth.getSession();
-  const userId = session?.user?.id;
+  try {
+    // Use our new more robust session detection
+    const session = await getServerSession();
+    if (session?.user) {
+      userId = session.user.id;
+      console.log('Dashboard page - Got user from enhanced session check:', userId);
+    } else {
+      // Try the standard method as fallback
+      const { data: { session: standardSession } } = await supabase.auth.getSession();
+      userId = standardSession?.user?.id;
+      console.log('Dashboard page - Got user from standard session method:', userId || 'not logged in');
+    }
+  } catch (error) {
+    console.error('Error getting user session:', error);
+  }
   
   // Get user projects
-  const { data: projects = [] } = userId 
-    ? await getUserProjects(userId)
-    : { data: [] };
+  let projects = [];
+  
+  if (userId) {
+    // Get user's projects if logged in
+    const { data } = await getUserProjects(userId);
+    projects = data || [];
+  } else {
+    // For debugging, fetch all projects when no user is found
+    console.log('No user ID found, fetching all projects for debugging');
+    const adminClient = getServiceSupabase();
+    const { data: allProjects } = await adminClient
+      .from('projects')
+      .select('*')
+      .order('created_at', { ascending: false });
+      
+    projects = allProjects || [];
+    console.log(`Found ${projects.length} total projects in database`);
+  }
 
   // Get stats
   const totalProjects = projects.length;
@@ -36,10 +65,20 @@ export default async function DashboardPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <h1 className="text-3xl font-bold">Welcome to Basecamp Clone</h1>
-        <p className="text-gray-600">
-          Your project management hub. Get started by creating a new project or checking your tasks.
-        </p>
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold">Welcome to Basecamp Clone</h1>
+            <p className="text-gray-600">
+              Your project management hub. Get started by creating a new project or checking your tasks.
+            </p>
+          </div>
+          
+          {/* Debug info */}
+          <div className="bg-yellow-50 p-3 rounded border border-yellow-200 text-sm">
+            <p><strong>Debug:</strong> User ID: {userId || 'Not logged in'}</p>
+            <p>Projects: {totalProjects}</p>
+          </div>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card>

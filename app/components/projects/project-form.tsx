@@ -1,9 +1,14 @@
-import { useState } from 'react';
+'use client';
+
+import { useState, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { format } from 'date-fns';
 import { CalendarIcon, Loader2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
+import { createClientBrowser } from '@/lib/supabase/client';
 
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -30,13 +35,12 @@ const formSchema = z.object({
 
 export type ProjectFormValues = z.infer<typeof formSchema>;
 
-interface ProjectFormProps {
-  defaultValues?: Partial<ProjectFormValues>;
-  isSubmitting?: boolean;
-  onSubmit: (values: ProjectFormValues) => void;
-}
-
-export function ProjectForm({ defaultValues, isSubmitting = false, onSubmit }: ProjectFormProps) {
+export function ProjectForm() {
+  const router = useRouter();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const supabase = createClientBrowser();
+  
   const form = useForm<ProjectFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -44,17 +48,62 @@ export function ProjectForm({ defaultValues, isSubmitting = false, onSubmit }: P
       description: '',
       status: 'Planning',
       start_date: new Date(),
-      ...defaultValues,
     },
   });
 
-  const handleSubmit = (values: ProjectFormValues) => {
-    onSubmit(values);
-  };
+  const onSubmit = useCallback(
+    async (data: ProjectFormValues) => {
+      setIsSubmitting(true);
+      setError(null);
+      
+      try {
+        // Get the user's session for the access token
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError || !session) {
+          setError("You must be logged in to create a project");
+          toast.error("Authentication error. Please sign in again.");
+          return;
+        }
+        
+        // Send the form data to the API
+        const response = await fetch("/api/projects", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${session.access_token}`
+          },
+          body: JSON.stringify(data),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || "Failed to create project");
+        }
+
+        toast.success("Project created successfully!");
+        router.push(`/projects/${result.project.id}`);
+      } catch (err: any) {
+        console.error("Error creating project:", err);
+        setError(err.message || "Failed to create project");
+        toast.error(err.message || "Failed to create project");
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [router, supabase]
+  );
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        {error && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded-md text-red-800 mb-4">
+            {error}
+          </div>
+        )}
+        
         <FormField
           control={form.control}
           name="name"
@@ -210,7 +259,7 @@ export function ProjectForm({ defaultValues, isSubmitting = false, onSubmit }: P
         <div className="flex justify-end">
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {defaultValues?.name ? 'Update Project' : 'Create Project'}
+            {form.defaultValues?.name ? 'Update Project' : 'Create Project'}
           </Button>
         </div>
       </form>

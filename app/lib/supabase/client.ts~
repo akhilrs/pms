@@ -1,0 +1,52 @@
+import { createClient } from '@supabase/supabase-js';
+import { Database } from '@/types/supabase';
+
+// Get environment variables
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('Missing Supabase environment variables');
+}
+
+// Standard client
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    flowType: 'pkce', // Recommended for Next.js applications
+  }
+});
+
+// Service role client for admin operations (server-side only)
+export const getServiceSupabase = () => {
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+  
+  if (!supabaseServiceKey) {
+    console.error('Missing Supabase service role key');
+  }
+  
+  return createClient<Database>(supabaseUrl, supabaseServiceKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  });
+};
+
+// Browser-only client to ensure we're using client-side session
+export function createClientBrowser() {
+  if (typeof window === 'undefined') {
+    throw new Error('Cannot use createClientBrowser on the server');
+  }
+  
+  return createClient<Database>(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      persistSession: true,
+      storageKey: 'supabase.auth.token',
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+      flowType: 'pkce',
+    }
+  });
+}

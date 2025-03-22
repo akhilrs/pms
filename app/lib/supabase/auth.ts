@@ -1,10 +1,18 @@
-import { supabase } from './client';
-import { User } from '@supabase/supabase-js';
+"use client";
 
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { Database } from "@/types/supabase";
+import { User } from "@supabase/supabase-js";
+
+// Create a client component Supabase client
+const supabase = createClientComponentClient<Database>();
+
+// Type definitions for backward compatibility
 export type AuthUser = User;
 
 export interface UserProfile {
   id: string;
+  user_id: string;
   first_name: string | null;
   last_name: string | null;
   avatar_url: string | null;
@@ -12,189 +20,139 @@ export interface UserProfile {
   updated_at: string;
 }
 
-export interface SignUpCredentials {
+/**
+ * Sign in with email and password
+ */
+export async function signIn({
+  email,
+  password,
+}: {
   email: string;
   password: string;
-  first_name?: string;
-  last_name?: string;
-}
-
-export interface SignInCredentials {
-  email: string;
-  password: string;
-}
-
-export async function signUp({ email, password, first_name, last_name }: SignUpCredentials) {
-  try {
-    console.log('Starting signup process with Supabase...', { email });
-    
-    // Use Supabase auth directly
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          first_name,
-          last_name
-        }
-      }
-    });
-    
-    if (error) {
-      console.error('Supabase auth.signUp error:', error);
-      throw error;
-    }
-
-    console.log('Signup successful', data);
-    
-    // Create profile in database if signup was successful
-    if (data.user) {
-      try {
-        const profile = await createUserProfile(data.user.id, first_name, last_name);
-        console.log('Profile created:', profile);
-      } catch (profileError) {
-        // Don't fail the signup if profile creation fails
-        console.error('Failed to create profile:', profileError);
-      }
-    }
-
-    return data;
-  } catch (error) {
-    console.error('Exception during signup process:', error);
-    throw error;
-  }
-}
-
-export async function signIn({ email, password }: SignInCredentials) {
-  try {
-    console.log('Starting signin process with Supabase...', { email });
-    
-    // Use Supabase auth directly
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
-    
-    if (error) {
-      console.error('Supabase auth.signIn error:', error);
-      throw error;
-    }
-
-    console.log('Signin successful', data);
-    return data;
-  } catch (error) {
-    console.error('Exception during signin process:', error);
-    throw error;
-  }
-}
-
-export async function signOut() {
-  try {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.error('Supabase auth.signOut error:', error);
-      throw error;
-    }
-    console.log('Signout successful');
-  } catch (error) {
-    console.error('Exception during signout process:', error);
-    throw error;
-  }
-}
-
-export async function getCurrentUser() {
-  try {
-    const { data: { user }, error } = await supabase.auth.getUser();
-    
-    if (error) {
-      console.warn('Error getting user:', error);
-      return null;
-    }
-    
-    return user;
-  } catch (error) {
-    console.error('Error checking session:', error);
-    return null;
-  }
-}
-
-// Helper function to create a user profile
-async function createUserProfile(userId: string, first_name?: string, last_name?: string) {
-  const { data, error } = await supabase
-    .from('profiles')
-    .insert([
-      {
-        id: userId,
-        first_name: first_name || null,
-        last_name: last_name || null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }
-    ])
-    .select()
-    .single();
+}) {
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
 
   if (error) {
+    console.error("Supabase auth error:", error.message);
     throw error;
   }
 
   return data;
 }
 
-export async function getUserProfile(userId: string) {
+/**
+ * Sign up with email and password
+ */
+export async function signUp({
+  email,
+  password,
+}: {
+  email: string;
+  password: string;
+}) {
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      emailRedirectTo: `${window.location.origin}/auth/callback`,
+    },
+  });
+
+  if (error) {
+    console.error("Supabase signup error:", error.message);
+    throw error;
+  }
+
+  return data;
+}
+
+/**
+ * Sign out the current user
+ */
+export async function signOut() {
+  const { error } = await supabase.auth.signOut();
+
+  if (error) {
+    console.error("Supabase signout error:", error.message);
+    throw error;
+  }
+
+  return true;
+}
+
+/**
+ * Check if there's a current session
+ */
+export async function getSession() {
+  const { data, error } = await supabase.auth.getSession();
+
+  if (error) {
+    console.error("Error getting session:", error.message);
+    return null;
+  }
+
+  return data.session;
+}
+
+/**
+ * Get the current user (for client components)
+ * @deprecated Use getCurrentUser instead which matches your existing API
+ */
+export async function getUser() {
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error) {
+    console.error("Error getting user:", error.message);
+    return null;
+  }
+
+  return user;
+}
+
+/**
+ * Get the current user (for backward compatibility)
+ */
+export async function getCurrentUser(): Promise<AuthUser | null> {
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error) {
+    console.error("Error getting current user:", error.message);
+    return null;
+  }
+
+  return user;
+}
+
+/**
+ * Get user profile data
+ */
+export async function getUserProfile(
+  userId: string,
+): Promise<UserProfile | null> {
+  if (!userId) {
+    return null;
+  }
+
   const { data, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', userId)
+    .from("profiles")
+    .select("*")
+    .eq("user_id", userId)
     .single();
 
   if (error) {
-    throw error;
+    console.error("Error fetching user profile:", error);
+    return null;
   }
 
   return data as UserProfile;
 }
 
-export async function updateUserProfile(userId: string, updates: Partial<UserProfile>) {
-  const { data, error } = await supabase
-    .from('profiles')
-    .update(updates)
-    .eq('id', userId)
-    .select()
-    .single();
-
-  if (error) {
-    throw error;
-  }
-
-  return data as UserProfile;
-}
-
-export async function uploadAvatar(userId: string, file: File) {
-  const fileExt = file.name.split('.').pop();
-  const fileName = `${userId}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-  const filePath = `avatars/${fileName}`;
-
-  const { error: uploadError } = await supabase.storage
-    .from('avatars')
-    .upload(filePath, file);
-
-  if (uploadError) {
-    throw uploadError;
-  }
-
-  const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
-
-  const { error: updateError } = await supabase
-    .from('profiles')
-    .update({
-      avatar_url: data.publicUrl,
-    })
-    .eq('id', userId);
-
-  if (updateError) {
-    throw updateError;
-  }
-
-  return data.publicUrl;
-} 

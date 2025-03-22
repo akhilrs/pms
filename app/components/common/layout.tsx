@@ -1,21 +1,21 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
-import { getCurrentUser, signOut, getUserProfile } from '@/lib/supabase/auth';
-import { AuthUser, UserProfile } from '@/lib/supabase/auth';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuLabel, 
-  DropdownMenuSeparator, 
-  DropdownMenuTrigger 
-} from '@/components/ui/dropdown-menu';
-import { toast } from 'sonner';
-import { Sidebar } from './sidebar';
+import { useState, useEffect } from "react";
+import { useRouter, usePathname } from "next/navigation";
+import { getCurrentUser, signOut, getUserProfile } from "@/lib/supabase/auth";
+import { AuthUser, UserProfile } from "@/lib/supabase/auth";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
+import { Sidebar } from "./sidebar";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -39,7 +39,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           setProfile(userProfile);
         }
       } catch (error) {
-        console.error('Error loading user:', error);
+        console.error("Error loading user:", error);
       }
     }
 
@@ -49,11 +49,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const handleSignOut = async () => {
     try {
       await signOut();
-      toast.success('Logged out successfully');
-      router.push('/auth/login');
+      toast.success("Logged out successfully");
+      router.push("/auth/login");
+      router.refresh();
     } catch (error) {
-      console.error('Error signing out:', error);
-      toast.error('Failed to sign out');
+      console.error("Error signing out:", error);
+      toast.error("Failed to sign out");
     }
   };
 
@@ -65,7 +66,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     if (profile?.first_name && profile?.last_name) {
       return `${profile.first_name[0]}${profile.last_name[0]}`.toUpperCase();
     }
-    return user?.email?.substring(0, 2).toUpperCase() || 'U';
+    return user?.email?.substring(0, 2).toUpperCase() || "U";
   };
 
   return (
@@ -93,27 +94,37 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d={isSidebarOpen ? 'M4 6h16M4 12h16M4 18h16' : 'M4 6h16M4 12h16M4 18h16'}
+                    d={
+                      isSidebarOpen
+                        ? "M4 6h16M4 12h16M4 18h16"
+                        : "M4 6h16M4 12h16M4 18h16"
+                    }
                   />
                 </svg>
               </button>
               <h1 className="ml-4 text-xl font-semibold text-gray-900">
-                {pathname === '/dashboard'
-                  ? 'Dashboard'
-                  : pathname.includes('/projects/')
-                  ? 'Project Details'
-                  : pathname === '/projects'
-                  ? 'Projects'
-                  : 'Basecamp Clone'}
+                {pathname === "/dashboard"
+                  ? "Dashboard"
+                  : pathname.includes("/projects/")
+                    ? "Project Details"
+                    : pathname === "/projects"
+                      ? "Projects"
+                      : "Basecamp Clone"}
               </h1>
             </div>
 
             <div className="flex items-center">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                  <Button
+                    variant="ghost"
+                    className="relative h-8 w-8 rounded-full"
+                  >
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={profile?.avatar_url || ''} alt={user?.email || ''} />
+                      <AvatarImage
+                        src={profile?.avatar_url || ""}
+                        alt={user?.email || ""}
+                      />
                       <AvatarFallback>{getInitials()}</AvatarFallback>
                     </Avatar>
                   </Button>
@@ -130,10 +141,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => router.push('/profile')}>
+                  <DropdownMenuItem onClick={() => router.push("/profile")}>
                     Profile
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => router.push('/settings')}>
+                  <DropdownMenuItem onClick={() => router.push("/settings")}>
                     Settings
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
@@ -147,8 +158,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         </header>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8">{children}</main>
+        <main className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8">
+          {children}
+        </main>
       </div>
     </div>
   );
-} 
+}
+
