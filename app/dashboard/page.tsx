@@ -39,20 +39,30 @@ export default async function DashboardPage() {
   let projects = [];
   
   if (userId) {
-    // Get user's projects if logged in
-    const { data } = await getUserProjects(userId);
-    projects = data || [];
+    try {
+      // Get user's projects if logged in
+      const { data } = await getUserProjects(userId);
+      projects = data || [];
+    } catch (error) {
+      console.error('Error fetching user projects:', error);
+      // Continue with empty projects array
+    }
   } else {
     // For debugging, fetch all projects when no user is found
     console.log('No user ID found, fetching all projects for debugging');
-    const adminClient = getServiceSupabase();
-    const { data: allProjects } = await adminClient
-      .from('projects')
-      .select('*')
-      .order('created_at', { ascending: false });
-      
-    projects = allProjects || [];
-    console.log(`Found ${projects.length} total projects in database`);
+    try {
+      const adminClient = getServiceSupabase();
+      const { data: allProjects } = await adminClient
+        .from('projects')
+        .select('*')
+        .order('created_at', { ascending: false });
+        
+      projects = allProjects || [];
+      console.log(`Found ${projects.length} total projects in database`);
+    } catch (error) {
+      console.error('Error fetching all projects:', error);
+      // Continue with empty projects array
+    }
   }
 
   // Get stats

@@ -3,24 +3,18 @@ import { cookies } from 'next/headers';
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('User signing out');
+    console.log('Signout request received');
     
-    // Clear auth cookies
-    cookies().delete('app-access-token');
-    cookies().delete('app-refresh-token');
+    // Clear cookies - updated to await cookies() for Next.js 15 compatibility
+    const cookieStore = await cookies();
+    cookieStore.delete('app-access-token');
+    cookieStore.delete('app-refresh-token');
     
-    return NextResponse.json({
-      success: true,
-      message: 'Successfully signed out'
-    });
+    return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error during signout:', error);
-    
     return NextResponse.json(
-      { 
-        success: false,
-        error: 'An error occurred during signout' 
-      },
+      { error: 'Failed to sign out' },
       { status: 500 }
     );
   }

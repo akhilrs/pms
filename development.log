@@ -1,602 +1,135 @@
 # Development Log
 
+## API Authentication Fixes
+**Date:** March 22, 2024  
+**Time:** 4:30 pm
 
-## March 21, 2024
+**Issue:** API routes were failing to authenticate users despite valid sessions existing. This was causing "Please log in" errors when submitting forms like project creation, even when the user was logged in.
 
-### Today's Work Summary
+**Root Cause:** API routes were using a different authentication method than server components, which was failing to detect cookies properly in the Next.js 15 environment.
 
-@10.17 pm 
+**Fix:**
+1. Updated API routes to use the same `getServerSession()` function from `/lib/supabase/server-auth.ts` that was working successfully in server components
+2. Added a fallback authentication mechanism in the API routes that tries multiple session detection methods
+3. Added client-side fallback to use server actions if API routes fail
 
+**Files Updated:**
+- `app/api/projects/route.ts` - Enhanced authentication to use `getServerSession()`
+- `components/projects/new-project-form.tsx` - Added fallback to server actions
 
-# Supabase Authentication & Projects Integration
+**Next Steps:**
+- Monitor authentication across all APIs and forms
+- Convert remaining REST API routes to server actions where appropriate
 
-## 1. Authentication Implementation
-
-### Middleware Setup
-- Created `middleware.ts` at the root level to handle Supabase session refresh
-- Configured middleware to run on protected routes only
-- Ensured proper routing patterns to avoid Next.js warnings
-
-```typescript
-// middleware.ts
-import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
-
-export async function middleware(req: NextRequest) {
-  const res = NextResponse.next();
-  
-  try {
-    // Create a Supabase client for the middleware
-    const supabase = createMiddlewareClient({ req, res });
-    
-    // Refresh session
-    await supabase.auth.getSession();
-  } catch (error) {
-    console.error('Middleware error:', error);
-  }
-  
-  return res;
-}
-
-// Match specific routes that need authentication
-export const config = {
-  matcher: [
-    '/dashboard',
-    '/dashboard/:path*',
-    '/projects',
-    '/projects/:path*'
-  ],
-};
-```
-
-### Auth Helpers
-- Created `lib/supabase/auth-helpers.ts` with server component compatible functions:
-  - `createServerClient()` - Creates a Supabase client for server components
-  - `getSession()` - Gets the current session
-  - `getUser()` - Gets the authenticated user
-  - `requireAuth()` - Requires authentication, throws if not authenticated
-
-```typescript
-// lib/supabase/auth-helpers.ts
-import { cookies } from 'next/headers';
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
-import { Database } from '@/types/supabase';
-
-/**
- * Creates a Supabase client for use in server components
- */
-export function createServerClient() {
-  try {
-    const cookieStore = cookies();
-    return createServerComponentClient<Database>({ 
-      cookies: () => cookieStore 
-    });
-  } catch (error) {
-    console.error('Error creating server client:', error);
-    throw error;
-  }
-}
-
-/**
- * Gets the current session in a server component
- */
-export async function getSession() {
-  try {
-    const supabase = createServerClient();
-    const { data: { session } } = await supabase.auth.getSession();
-    return session;
-  } catch (error) {
-    console.error('Error getting session in server component:', error);
-    return null;
-  }
-}
-
-/**
- * Gets the current user in a server component
- */
-export async function getUser() {
-  try {
-    const session = await getSession();
-    return session?.user || null;
-  } catch (error) {
-    console.error('Error getting user in server component:', error);
-    return null;
-  }
-}
-
-/**
- * Requires authentication, throws if not authenticated
- */
-export async function requireAuth() {
-  const user = await getUser();
-  
-  if (!user) {
-    throw new Error('Authentication required');
-  }
-  
-  return user;
-}
-```
-
-### Backward Compatibility
-- Updated `lib/supabase/server-auth.ts` to maintain compatibility with existing code
-- Added fallback methods to ensure your existing code continues to work
-
-```typescript
-// lib/supabase/server-auth.ts
-import { createServerClient, getSession, getUser, requireAuth } from './auth-helpers';
-import { cookies } from 'next/headers';
-import { supabase } from './client';
-
-/**
- * Gets the current user session in a server component
- * Maintains backward compatibility with your existing code
- */
-export async function getServerSession() {
-  try {
-    // First try the new method using auth-helpers
-    const session = await getSession();
-    
-    if (session) {
-      console.log('Server auth - Got session via auth-helpers:', session.user.id);
-      return session;
-    }
-    
-    // Try using standard method with supabase client as fallback
-    try {
-      const { data: { session: stdSession } } = await supabase.auth.getSession();
-      
-      if (stdSession) {
-        console.log('Server auth - Got session via standard method:', stdSession.user.id);
-        return stdSession;
-      }
-    } catch (stdError) {
-      console.warn('Server auth - Error with standard method:', stdError);
-    }
-    
-    console.log('Server auth - No session found after trying all methods');
-    return null;
-  } catch (error) {
-    console.error('Server auth - Unexpected error:', error);
-    return null;
-  }
-}
-
-/**
- * Gets the authenticated user, or null if not authenticated
- */
-export async function getAuthenticatedUser() {
-  const session = await getServerSession();
-  return session?.user || null;
-}
-
-/**
- * Requires authentication, throws if not authenticated
- */
-export { requireAuth };
-```
-
-### Auth Callback Handler
-- Created `app/auth/callback/route.ts` to handle Supabase OAuth redirects
-- Implemented code exchange for sessions
-
-```typescript
-// app/auth/callback/route.ts
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
-import { NextRequest, NextResponse } from 'next/server';
-
-export async function GET(request: NextRequest) {
-  const requestUrl = new URL(request.url);
-  const code = requestUrl.searchParams.get('code');
-
-  if (code) {
-    const cookieStore = cookies();
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
-    await supabase.auth.exchangeCodeForSession(code);
-  }
-
-  // URL to redirect to after sign in process completes
-  return NextResponse.redirect(new URL('/projects', request.url));
-}
-```
-
-## 2. Projects Implementation
-
-### Projects API
-- Updated `lib/supabase/projects.ts` with all required functions:
-  - `getUserProjects()` - Gets all projects for a user
-  - `getProject()` - Gets a single project
-  - `createProject()` - Creates a new project
-  - `updateProject()` - Updates an existing project
-  - `deleteProject()` - Deletes a project
-
-```typescript
-// Simplified example from lib/supabase/projects.ts
-export async function getUserProjects(
-  userId: string
-): Promise<{ data: ProjectWithDetails[] | null; error: PostgrestError | null }> {
-  console.log(`getUserProjects called with userId: ${userId}`);
-  
-  if (!userId) {
-    console.log('getUserProjects: No userId provided');
-    return { data: null, error: null };
-  }
-
-  try {
-    // Create a server client
-    const supabase = createServerClient();
-    
-    // First, get projects owned by the user
-    console.log('Fetching projects owned by the user...');
-    const { data: ownedProjects, error: ownedError } = await supabase
-      .from('projects')
-      .select('*')
-      .eq('owner_id', userId);
-      
-    if (ownedError) {
-      console.error('Error fetching owned projects:', ownedError);
-      return { data: null, error: ownedError };
-    }
-    
-    // Get projects where the user is a member - WITH MODIFIED APPROACH
-    console.log('Fetching projects where user is a member...');
-    
-    let memberProjectIds = [];
-    let memberError = null;
-    
-    try {
-      // Modified approach: Use a simpler query without complex joins that could trigger recursion
-      const { data: memberRelations, error } = await supabase
-        .from('project_members')
-        .select('project_id')
-        .eq('user_id', userId);
-      
-      // Additional implementation details...
-    }
-    
-    // Process and return projects...
-  }
-}
-```
-
-### RLS Policy Workarounds
-- Modified project functions to work around the RLS policy infinite recursion issue
-- Simplified queries to avoid triggering problematic policies
-- Used different approaches to fetch related data
-
-## 3. Next.js Specific Fixes
-
-### Server Component Compatibility
-- Fixed params handling in dynamic routes (like `/projects/[id]`)
-- Addressed cookie warnings with updated Next.js config
-- Ensured proper syntax for server components
-
-```typescript
-// Updated next.config.js for Next.js 15
-/** @type {import('next').NextConfig} */
-const nextConfig = {
-  // Updated config for Next.js 15+
-  experimental: {
-    // Empty but keep it for future experimental features
-  },
-  // Moved from experimental to root level in Next.js 15
-  serverExternalPackages: ['@supabase/auth-helpers-nextjs'],
-  typescript: {
-    // Temporarily ignore type errors in development
-    ignoreBuildErrors: process.env.NODE_ENV === 'development',
-  },
-};
-
-module.exports = nextConfig;
-```
-
-### UI Improvements
-- Maintained all your existing UI while fixing backend issues
-- Added error handling and fallbacks 
-
-## 4. Issues Encountered & Solutions
-
-### Supabase RLS Policy Issues
-- Identified infinite recursion in project_members RLS policy
-- Provided SQL to fix RLS policies and workarounds for immediate use
-
-```sql
--- First, drop all existing policies on project_members
-DROP POLICY IF EXISTS "Users can view their own project memberships" ON project_members;
-DROP POLICY IF EXISTS "Users can view project memberships for projects they're a member of" ON project_members;
-DROP POLICY IF EXISTS "Project owners can view all members" ON project_members;
-DROP POLICY IF EXISTS "Users can view members of their projects" ON project_members;
-DROP POLICY IF EXISTS "Users can manage their own project memberships" ON project_members;
-DROP POLICY IF EXISTS "Project owners can manage all memberships" ON project_members;
-
--- Create simplified policies
-
--- Allow users to see their own memberships
-CREATE POLICY "Users can view their own memberships" 
-ON project_members FOR SELECT 
-USING (auth.uid() = user_id);
-
--- Allow users to see other members of projects they're in
-CREATE POLICY "Users can view memberships of their projects" 
-ON project_members FOR SELECT 
-USING (
-  project_id IN (
-    SELECT project_id FROM project_members WHERE user_id = auth.uid()
-  )
-);
-
--- Allow users to insert themselves as members (if needed)
-CREATE POLICY "Users can add themselves as members" 
-ON project_members FOR INSERT 
-WITH CHECK (auth.uid() = user_id);
-
--- Allow project owners to manage memberships
-CREATE POLICY "Project owners can manage memberships" 
-ON project_members FOR ALL 
-USING (
-  EXISTS (
-    SELECT 1 FROM projects
-    WHERE projects.id = project_members.project_id
-    AND projects.owner_id = auth.uid()
-  )
-);
-```
-
-### Next.js 15 Compatibility
-- Updated config options for Next.js 15
-- Moved from experimental config to standard config
-
-### User Profile Display Issues
-- Attempted different approaches to display user info
-- Tried direct profile access and email-based fallbacks
-
-## 5. Recommendations for Complete Solution
-
-1. **Fix RLS Policies in Supabase**: Use the provided SQL to fix the infinite recursion.
-
-2. **Create Profiles Table**: Ensure you have a profiles table with proper structure:
-   ```sql
-   CREATE TABLE IF NOT EXISTS profiles (
-     id UUID PRIMARY KEY REFERENCES auth.users(id),
-     user_id UUID REFERENCES auth.users(id),
-     first_name TEXT,
-     last_name TEXT,
-     avatar_url TEXT,
-     created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
-   );
-   ```
-
-3. **Keep Using the Updated Auth Helpers**: The auth-helpers.ts and server-auth.ts files provide a solid foundation for authentication.
-1. **Authentication and Session Management**
-   - Split authentication functionality to handle server/client architecture differences
-   - Created a separate `server-auth.ts` file for Next.js server components
-   - Modified the original `auth.ts` to be compatible with Pages Router
-   - Updated cookie handling to use async/await pattern for Next.js 15 compatibility
-   - Identified and addressed architectural issues with authentication in the app 
-
-2. **Project Data Retrieval**
-   - Fixed project data fetching to work with or without authenticated users
-   - Implemented fallback service role access for displaying projects when users aren't authenticated
-   - Updated project detail page to show comprehensive project information
-   - Added error handling and 404 redirects for non-existent projects
-   - Improved debugging information on projects page
-
-3. **Issues Identified**
-   - Next.js 15 error: `cookies()` methods need to be awaited before accessing
-   - Warning: "Route '/projects' used `cookies().getAll()`. `cookies()` should be awaited before using its value"
-   - Warning: "Route '/projects' used `cookies().get('supabase.auth.token')`. `cookies()` should be awaited before using its value"
-   - Authentication state is not persisting correctly between pages
-   - Session detection methods are detecting no cookies despite changes
-
-4. **Current Status**
-   - Projects listing page is working but showing "Not logged in" in debug info
-   - Project detail page is successfully loading project data
-   - Session detection is working but not finding valid sessions
-   - Application structure has been streamlined for better organization
-   - Server-side vs. client-side authentication has been properly separated
-
-### Next Steps
-
-1. **Fix Cookie Handling in Next.js**
-   - Research further on the correct pattern for using `cookies()` in Next.js 15
-   - Investigate if cookie parsing should happen at a different stage
-   - Determine how to properly await or handle cookies() operations
-
-2. **Improve Authentication Flow**
-   - Review login/logout flow for potential issues
-   - Add more logging to understand where session data is being lost
-   - Check browser storage and cookies to ensure they're being set correctly
-   - Test with a fresh user account to validate the flow
-
-3. **Enhance Error Handling**
-   - Implement better error messages for authentication issues
-   - Add fallback UI components for when authentication fails
-   - Create a more user-friendly experience around auth errors
-
-4. **Future Features**
-   - Once authentication is working reliably, focus on project management features
-   - Implement task creation and assignment
-   - Add file uploading capabilities
-   - Enhance team management functionality
-
-## March 20, 2024
+## March 22, 2024
 
 ### Today's Work Summary
 
-1. **Project Structure Cleanup**
-   - Consolidated duplicate app directories to address the structure issues identified yesterday
-   - Moved all necessary files from `/app/app` to `/app`
-   - Removed the duplicate nested app directory
-   - Verified and fixed import paths to ensure consistency
+@4:15 pm
 
-2. **Key Changes**
-   - Kept all Next.js app files (layout.tsx, page.tsx, globals.css, favicon.ico)
-   - Preserved API routes with proper directory structure
-   - Maintained project routes with dynamic parameters
-   - Ensured consistent import paths throughout the codebase
+# Database Schema Rebuild
 
-3. **Benefits of Cleanup**
-   - Resolved routing conflicts and import path issues
-   - Simplified the project structure for easier navigation
-   - Removed potential sources of confusion for developers
-   - Prepared the codebase for further development without structural obstacles
+After encountering persistent infinite recursion issues with Supabase RLS policies, we've decided to recreate the database schema from scratch with simplified policies that avoid the recursion problem.
 
-4. **Next Steps**
-   - Fix the dynamic route parameter handling for project details
-   - Implement consistent error handling for API routes
-   - Continue with project functionality development
-   - Add comprehensive testing for authentication and project creation 
+## Changes Made
 
-## March 19, 2024
+1. Created a comprehensive SQL script `supabase/migrations/recreate_database.sql` that:
+   - Drops all existing tables (project_members, projects, profiles)
+   - Creates tables with proper structure and foreign key relationships
+   - Sets up Row Level Security (RLS) policies with simplified logic
+   - Creates triggers for automatic profile creation
 
-### Today's Work Summary
+2. The new RLS policies avoid recursive checks by:
+   - Using simpler query patterns
+   - Avoiding nested subqueries that reference the same table in RLS policies
+   - Creating targeted policies for specific operations
 
-1. **Project Creation Fixes**
-   - Fixed project creation issues with Supabase integration
-   - Resolved errors with Supabase client initialization and method access
-   - Implemented Row-Level Security (RLS) policies in Supabase
-   - Created SQL policies to allow authenticated users to create projects
+3. Added a visibility column to the projects table to support:
+   - Public vs. private projects
+   - Self-service membership for public projects
+   - Better access control
 
-2. **UI Component Development**
-   - Added missing Tabs component to the project
-   - Installed required Radix UI dependencies
-   - Created UI components for project details view
+## Implementation Strategy
 
-3. **Debugging Session**
-   - Identified and fixed issues with the API routes for project creation
-   - Resolved parameter errors in createProject function
-   - Fixed path resolution issues in import statements
-   - Implemented direct Supabase API calls as a workaround for client issues
+The schema rebuild follows these key principles:
 
-4. **Project Structure Issues Identified**
-   - Discovered duplicate app directories (app/ and app/app/)
-   - Found conflicting route files between different directory structures
-   - Identified inconsistent import paths causing resolution problems
-   - Encountered Next.js dynamic route parameter handling errors
+1. **Simplified Policy Structure**:
+   - Direct user-based checks (e.g., `auth.uid() = user_id`)
+   - Single-level subqueries to avoid recursion
+   - Explicit separation of SELECT, INSERT, UPDATE, and DELETE policies
 
-### Project Structure Issues
+2. **Improved Database Design**:
+   - Proper foreign key constraints with CASCADE behavior
+   - Consistent timestamp fields (created_at, updated_at)
+   - Unique constraints for membership relationships
 
-The project currently has several structural issues that need to be addressed:
+3. **Robust Profile Handling**:
+   - Auto-creation of profiles for new users
+   - Better profile schema with additional metadata fields
 
-1. **Duplicate App Directories**
-   - Two app directories exist: `/app` and `/app/app`
-   - Both contain similar but slightly different implementations
-   - Routes are being executed from different locations than expected
+## Testing and Validation
 
-2. **Next.js Dynamic Route Parameter Issues**
-   - Error: `Route "/projects/[id]" used params.id. params should be awaited before using its properties`
-   - Attempted fixes with synchronous parameter handling
-   - Issue persists despite parameter handling changes
+After applying this script in the Supabase SQL Editor:
+- The infinite recursion errors should be resolved
+- Project listing functionality should work correctly
+- Project membership queries should execute without errors
 
-3. **Import Path Inconsistencies**
-   - Some imports use `@/lib/...` while others use `@/app/lib/...`
-   - Path resolution issues between different parts of the application
-   - Relative vs. absolute import inconsistencies
+## Next Steps
 
-### Plans for Tomorrow
+1. After applying the schema changes, we should test the application to ensure:
+   - Projects load correctly on dashboard and projects pages
+   - Project creation and membership functions work
+   - Error handling is appropriate if any issues remain
 
-1. **Clean up Project Structure**
-   - Decide on a single app directory structure
-   - Remove the duplicate app folder
-   - Consolidate all files into a consistent directory structure
-   - Update import paths throughout the codebase
+2. Update application code if needed to take advantage of new schema features
 
-2. **Fix Dynamic Route Parameter Handling**
-   - Research and implement the correct approach for Next.js dynamic routes
-   - Review the Next.js documentation for proper parameter handling
-   - Test different approaches to resolve the params.id error
+@3:30 pm
 
-3. **Standardize API Routes**
-   - Consolidate duplicate API routes
-   - Implement consistent error handling
-   - Document API structure and usage
+# Async Supabase Client Integration
 
-4. **Organize Development Environment**
-   - Clean up environment variables
-   - Document the environment setup process
-   - Create a standardized development setup guide 
+After fixing the cookie handling in Next.js 15, we encountered another issue with the Supabase client initialization:
 
-## March 14, 2024
+## 1. Async Client Creation Issues
 
-### Today's Work Summary
+### Root Cause
+- When we updated `createServerClient()` to be async in `auth-helpers.ts`, we also needed to await it everywhere it's called
+- This resulted in TypeErrors: "supabase.from is not a function" because the client wasn't fully initialized
 
-1. **Supabase Integration Overhaul**
-   - Switched to using the official Supabase Docker Compose setup
-   - Updated Supabase client configuration to use the official settings
-   - Rewritten authentication handlers to use the Supabase client directly
-   - Created SQL migration for the profiles table
+### Files Fixed
+- Updated `lib/supabase/projects.ts` to properly await the client in all methods:
+  - Fixed `getUserProjects`, `getProject`, `createProject`, `updateProject`, and `deleteProject` functions
+  - Used await with every `createServerClient()` call
 
-2. **Configuration Updates**
-   - Updated Supabase client to use environment variables
-   - Switched from 'implicit' to 'pkce' authentication flow for better security
-   - Improved error handling and logging throughout the client
-   - Created a test endpoint to verify Supabase connectivity
+- Added better error handling in `app/dashboard/page.tsx`:
+  - Wrapped project fetching in try/catch blocks
+  - Added proper error logging
+  - Ensured the UI can handle errors gracefully
 
-3. **Authentication Files Updated**
-   - `/lib/supabase/client.ts` - Updated client configuration
-   - `/lib/supabase/auth.ts` - Rewritten to use Supabase client directly
-   - `/supabase/migrations/00000000000000_create_profiles_table.sql` - SQL migration for profiles table
-   - `/.env` - Added environment variables for Supabase configuration
-   - `/app/api/supabase-test/route.ts` - Test endpoint to verify connectivity
+### Implementation Pattern
+```typescript
+// OLD pattern (causing errors)
+const supabase = createServerClient();
 
-4. **Key Improvements**
-   - Removed custom API endpoints in favor of direct Supabase client usage
-   - Enhanced error handling with detailed logging
-   - Added profile creation during user signup
-   - Updated to use environment variables for configuration
-   - Created test endpoint to verify connectivity
+// NEW pattern (properly awaiting the async function)
+const supabase = await createServerClient();
+```
 
-### Next Steps
+## 2. Next Steps
 
-1. **Table Schema Creation**
-   - Run SQL migration to create the profiles table
-   - Implement additional database tables as needed for the application
+### Authentication Reliability
+- Continue testing the authentication flow to ensure sessions persist correctly
+- Monitor for any further TypeErrors or async/await issues
+- Consider adding more fallback methods for authentication when cookies fail
 
-2. **Integration Testing**
-   - Test authentication flows (signup, signin, signout)
-   - Verify profile creation and retrieval
-   - Test error handling in different scenarios
+### Supabase RLS Policies
+- Still need to address the infinite recursion in RLS policies for project_members
+- Can apply the SQL fixes documented in the knowledge base
 
-3. **UI Integration**
-   - Connect the authentication system to the application UI
-   - Implement protected routes and authentication guards
-   - Create user profile management interfaces 
+# Previous entries
 
-## March 13, 2024
+## March 22, 2024
 
 ### Today's Work Summary
 
-1. **Authentication System Overhaul**
-   - Created a custom mock authentication system to bypass Supabase client issues
-   - Implemented endpoints for signup, signin, signout, and session management
-   - Built a testing interface at `/auth-test` for verification
+@10:00 am
 
-2. **Current Status**
-   - Mock auth system is functional but lacks persistence between server restarts
-   - Signup works correctly and creates users in memory
-   - Signin fails because data doesn't persist between API calls
-   - AuthGuard component is redirecting to login when session check fails
-
-3. **Authentication Components Created**
-   - `/lib/mock-auth/db.ts` - In-memory database for user management
-   - `/app/api/auth/signup/route.ts` - User registration endpoint
-   - `/app/api/auth/signin/route.ts` - User authentication endpoint
-   - `/app/api/auth/signout/route.ts` - Session termination endpoint
-   - `/app/api/auth/session/route.ts` - Session validation endpoint
-   - `/app/auth-test/page.tsx` - Testing interface for auth functionality
-
-4. **Issues Identified**
-   - Original Supabase integration fails with routing/connectivity issues
-   - Kong configuration may not be properly routing auth requests
-   - JSON parsing errors occur when using Supabase client
-   - Session persistence is problematic between API calls
-
-### Decision for Next Steps
-
-After evaluating options, we've decided to:
-- Abandon further development of the mock authentication system
-- Start fresh with the Supabase integration tomorrow
-- Focus first on reviewing and fixing the Kong configuration
-- Then rebuild the Supabase client integration properly 

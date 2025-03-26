@@ -7,9 +7,9 @@ import { Database } from "@/types/supabase";
  * Creates a Supabase client for use in server components
  * This is the recommended way to access Supabase in server components
  */
-export function createServerClient() {
+export async function createServerClient() {
   try {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     return createServerComponentClient<Database>({
       cookies: () => cookieStore,
     });
@@ -31,7 +31,7 @@ export function createActionClient() {
  */
 export async function getSession() {
   try {
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
     const {
       data: { session },
     } = await supabase.auth.getSession();

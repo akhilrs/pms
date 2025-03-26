@@ -43,7 +43,7 @@ export async function getServerSession() {
 
     // Try with cookies directly as last resort
     try {
-      const cookieStore = cookies();
+      const cookieStore = await cookies();
       const accessToken = cookieStore.get("sb-localhost-auth-token")?.value;
 
       if (accessToken) {

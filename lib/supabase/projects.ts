@@ -40,8 +40,8 @@ export async function getUserProjects(userId: string): Promise<{
   }
 
   try {
-    // Create a server client
-    const supabase = createServerClient();
+    // Create a server client - updated to await the async function
+    const supabase = await createServerClient();
 
     // First, get projects owned by the user
     console.log("Fetching projects owned by the user...");
@@ -204,7 +204,7 @@ export async function getProject(
 
   try {
     // Create a server client
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     // Get the basic project data without relationships
     const { data: projectData, error: projectError } = await supabase
@@ -277,7 +277,7 @@ export async function createProject(
 ): Promise<{ data: Project | null; error: PostgrestError | null }> {
   try {
     // Create a server client
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     if (!projectData || typeof projectData !== "object") {
       throw new Error(
@@ -328,7 +328,7 @@ export async function updateProject(
 ): Promise<{ data: Project | null; error: PostgrestError | null }> {
   try {
     // Create a server client
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     // Update project
     const { data, error } = await supabase
@@ -353,7 +353,7 @@ export async function deleteProject(
 ): Promise<{ error: PostgrestError | null }> {
   try {
     // Create a server client
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     // First try to delete all project members to avoid foreign key constraints
     try {

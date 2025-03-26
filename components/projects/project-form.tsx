@@ -1,14 +1,11 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { format } from 'date-fns';
 import { CalendarIcon, Loader2 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { toast } from 'sonner';
-import { createClientBrowser } from '@/lib/supabase/client';
 
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -35,69 +32,39 @@ const formSchema = z.object({
 
 export type ProjectFormValues = z.infer<typeof formSchema>;
 
-export function ProjectForm() {
-  const router = useRouter();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+interface ProjectFormProps {
+  onSubmit: (data: ProjectFormValues) => Promise<void>;
+  isSubmitting?: boolean;
+  initialData?: Partial<ProjectFormValues>;
+}
+
+export function ProjectForm({ onSubmit, isSubmitting = false, initialData }: ProjectFormProps) {
   const [error, setError] = useState<string | null>(null);
-  const supabase = createClientBrowser();
   
   const form = useForm<ProjectFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: '',
-      description: '',
-      status: 'Planning',
-      start_date: new Date(),
+      name: initialData?.name || '',
+      description: initialData?.description || '',
+      status: initialData?.status || 'Planning',
+      start_date: initialData?.start_date || new Date(),
+      end_date: initialData?.end_date,
     },
   });
 
-  const onSubmit = useCallback(
-    async (data: ProjectFormValues) => {
-      setIsSubmitting(true);
+  const handleSubmit = async (data: ProjectFormValues) => {
+    try {
       setError(null);
-      
-      try {
-        // Get the user's session for the access token
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        
-        if (sessionError || !session) {
-          setError("You must be logged in to create a project");
-          toast.error("Authentication error. Please sign in again.");
-          return;
-        }
-        
-        // Send the form data to the API
-        const response = await fetch("/api/projects", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${session.access_token}`
-          },
-          body: JSON.stringify(data),
-        });
-
-        const result = await response.json();
-
-        if (!response.ok) {
-          throw new Error(result.error || "Failed to create project");
-        }
-
-        toast.success("Project created successfully!");
-        router.push(`/projects/${result.project.id}`);
-      } catch (err: any) {
-        console.error("Error creating project:", err);
-        setError(err.message || "Failed to create project");
-        toast.error(err.message || "Failed to create project");
-      } finally {
-        setIsSubmitting(false);
-      }
-    },
-    [router, supabase]
-  );
+      await onSubmit(data);
+    } catch (err: any) {
+      console.error("Error submitting form:", err);
+      setError(err.message || "An error occurred while submitting the form");
+    }
+  };
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
         {error && (
           <div className="p-3 bg-red-50 border border-red-200 rounded-md text-red-800 mb-4">
             {error}
@@ -256,10 +223,13 @@ export function ProjectForm() {
           />
         </div>
 
-        <div className="flex justify-end">
+        <div className="flex justify-end space-x-4 pt-4">
+          <Button type="button" variant="outline" onClick={() => window.history.back()}>
+            Cancel
+          </Button>
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {form.defaultValues?.name ? 'Update Project' : 'Create Project'}
+            {isSubmitting ? 'Creating...' : 'Create Project'}
           </Button>
         </div>
       </form>

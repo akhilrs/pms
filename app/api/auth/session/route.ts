@@ -6,8 +6,9 @@ export async function GET(request: NextRequest) {
   try {
     console.log('Session check requested');
     
-    // Get cookies
-    const accessToken = cookies().get('app-access-token')?.value;
+    // Get cookies - updated to await cookies() for Next.js 15 compatibility
+    const cookieStore = await cookies();
+    const accessToken = cookieStore.get('app-access-token')?.value;
     
     if (!accessToken) {
       return NextResponse.json({
@@ -21,9 +22,10 @@ export async function GET(request: NextRequest) {
     const session = validateSession(accessToken);
     
     if (!session) {
-      // Clear cookies if session is invalid
-      cookies().delete('app-access-token');
-      cookies().delete('app-refresh-token');
+      // Clear cookies if session is invalid - properly awaiting cookies
+      const cookieStore = await cookies();
+      cookieStore.delete('app-access-token');
+      cookieStore.delete('app-refresh-token');
       
       return NextResponse.json({
         user: null,
@@ -36,9 +38,10 @@ export async function GET(request: NextRequest) {
     const user = getUserById(session.user_id);
     
     if (!user) {
-      // Clear cookies if user doesn't exist
-      cookies().delete('app-access-token');
-      cookies().delete('app-refresh-token');
+      // Clear cookies if user doesn't exist - properly awaiting cookies
+      const cookieStore = await cookies();
+      cookieStore.delete('app-access-token');
+      cookieStore.delete('app-refresh-token');
       
       return NextResponse.json({
         user: null,
@@ -73,12 +76,10 @@ export async function GET(request: NextRequest) {
       profile
     });
   } catch (error) {
-    console.error('Unexpected error checking session:', error);
-    return NextResponse.json({
-      user: null,
-      session: null,
-      profile: null,
-      error: 'Error checking session'
-    });
+    console.error('Error checking session:', error);
+    return NextResponse.json(
+      { error: 'Failed to check session' },
+      { status: 500 }
+    );
   }
 } 

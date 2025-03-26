@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, getServiceSupabase } from '@/lib/supabase/client';
 import { formatDateForSupabase } from '@/lib/utils';
+import { getServerSession } from '@/lib/supabase/server-auth';
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,34 +11,45 @@ export async function POST(request: NextRequest) {
     // Log the request headers for debugging
     console.log('Request headers:', Object.fromEntries([...request.headers]));
     
-    // Try multiple methods to get the session
-    console.log('Attempting to get session using regular client...');
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
-    console.log('Session attempt result:', { 
-      hasSession: !!session, 
-      userId: session?.user?.id, 
-      error: sessionError 
-    });
-    
-    // If no session, try to get the auth token from Authorization header
+    // First try using the enhanced server-side authentication
+    console.log('Using server-side authentication with getServerSession...');
+    const session = await getServerSession();
     let userId = session?.user?.id;
-    if (!userId) {
-      console.log('No session found, checking for token in headers...');
-      const authHeader = request.headers.get('authorization');
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        const token = authHeader.substring(7);
-        console.log('Found token in header, attempting to get user...');
-        
-        const { data: { user }, error: userError } = await supabase.auth.getUser(token);
-        if (user) {
-          userId = user.id;
-          console.log('Retrieved user from token:', userId);
-        } else if (userError) {
-          console.error('Error getting user from token:', userError);
+    
+    if (userId) {
+      console.log('API - Successfully authenticated user via getServerSession:', userId);
+    } else {
+      // Fall back to the original methods if server-side auth fails
+      
+      // Try multiple methods to get the session
+      console.log('Server-side auth failed, trying regular client...');
+      const { data: { session: clientSession }, error: sessionError } = await supabase.auth.getSession();
+      
+      console.log('Session attempt result:', { 
+        hasSession: !!clientSession, 
+        userId: clientSession?.user?.id, 
+        error: sessionError 
+      });
+      
+      // If no session, try to get the auth token from Authorization header
+      userId = clientSession?.user?.id;
+      if (!userId) {
+        console.log('No session found, checking for token in headers...');
+        const authHeader = request.headers.get('authorization');
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+          const token = authHeader.substring(7);
+          console.log('Found token in header, attempting to get user...');
+          
+          const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+          if (user) {
+            userId = user.id;
+            console.log('Retrieved user from token:', userId);
+          } else if (userError) {
+            console.error('Error getting user from token:', userError);
+          }
+        } else {
+          console.log('No authorization header found');
         }
-      } else {
-        console.log('No authorization header found');
       }
     }
     
