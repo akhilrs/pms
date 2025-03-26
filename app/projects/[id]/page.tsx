@@ -440,4 +440,3 @@ function renderProject(project: any) {
     </DashboardLayout>
   );
 }
-

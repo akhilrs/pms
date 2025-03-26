@@ -6,6 +6,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { format } from 'date-fns';
 import { CalendarIcon, Loader2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -38,9 +40,9 @@ interface ProjectFormProps {
   initialData?: Partial<ProjectFormValues>;
 }
 
-export function ProjectForm({ onSubmit, isSubmitting = false, initialData }: ProjectFormProps) {
-  const [error, setError] = useState<string | null>(null);
-  
+export function ProjectForm({ onSubmit, isSubmitting: externalIsSubmitting, initialData }: ProjectFormProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const form = useForm<ProjectFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -53,35 +55,34 @@ export function ProjectForm({ onSubmit, isSubmitting = false, initialData }: Pro
   });
 
   const handleSubmit = async (data: ProjectFormValues) => {
+    if (isSubmitting || externalIsSubmitting) return;
+    
     try {
-      setError(null);
+      setIsSubmitting(true);
       await onSubmit(data);
-    } catch (err: any) {
-      console.error("Error submitting form:", err);
-      setError(err.message || "An error occurred while submitting the form");
+      toast.success('Project saved successfully');
+    } catch (error) {
+      console.error('Form submission error:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to save project');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-        {error && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-md text-red-800 mb-4">
-            {error}
-          </div>
-        )}
-        
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-8">
         <FormField
           control={form.control}
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Project Name *</FormLabel>
+              <FormLabel>Project Name</FormLabel>
               <FormControl>
                 <Input placeholder="Enter project name" {...field} />
               </FormControl>
               <FormDescription>
-                Give your project a clear, descriptive name.
+                Give your project a clear and descriptive name
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -96,64 +97,66 @@ export function ProjectForm({ onSubmit, isSubmitting = false, initialData }: Pro
               <FormLabel>Description</FormLabel>
               <FormControl>
                 <Textarea
-                  placeholder="Enter a brief description of your project"
-                  className="min-h-32"
+                  placeholder="Enter project description"
+                  className="resize-none"
                   {...field}
-                  value={field.value || ''}
                 />
               </FormControl>
               <FormDescription>
-                Provide details about the project's purpose and goals.
+                Provide a brief description of your project
               </FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField
-            control={form.control}
-            name="status"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Status *</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select project status" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="Planning">Planning</SelectItem>
-                    <SelectItem value="In Progress">In Progress</SelectItem>
-                    <SelectItem value="On Hold">On Hold</SelectItem>
-                    <SelectItem value="Completed">Completed</SelectItem>
-                    <SelectItem value="Canceled">Canceled</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormDescription>
-                  The current status of your project.
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+        <FormField
+          control={form.control}
+          name="status"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Status</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select project status" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="Planning">Planning</SelectItem>
+                  <SelectItem value="In Progress">In Progress</SelectItem>
+                  <SelectItem value="On Hold">On Hold</SelectItem>
+                  <SelectItem value="Completed">Completed</SelectItem>
+                  <SelectItem value="Canceled">Canceled</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormDescription>
+                Set the current status of your project
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
             control={form.control}
             name="start_date"
             render={({ field }) => (
               <FormItem className="flex flex-col">
-                <FormLabel>Start Date *</FormLabel>
+                <FormLabel>Start Date</FormLabel>
                 <Popover>
                   <PopoverTrigger asChild>
                     <FormControl>
                       <Button
                         variant="outline"
-                        className="w-full pl-3 text-left font-normal"
+                        className={cn(
+                          "w-full pl-3 text-left font-normal",
+                          !field.value && "text-muted-foreground"
+                        )}
                       >
                         {field.value ? (
-                          format(field.value, 'PPP')
+                          format(field.value, "PPP")
                         ) : (
                           <span>Pick a date</span>
                         )}
@@ -166,12 +169,15 @@ export function ProjectForm({ onSubmit, isSubmitting = false, initialData }: Pro
                       mode="single"
                       selected={field.value}
                       onSelect={field.onChange}
+                      disabled={(date) =>
+                        date < new Date(new Date().setHours(0, 0, 0, 0))
+                      }
                       initialFocus
                     />
                   </PopoverContent>
                 </Popover>
                 <FormDescription>
-                  When will the project start?
+                  When does the project start?
                 </FormDescription>
                 <FormMessage />
               </FormItem>
@@ -183,16 +189,19 @@ export function ProjectForm({ onSubmit, isSubmitting = false, initialData }: Pro
             name="end_date"
             render={({ field }) => (
               <FormItem className="flex flex-col">
-                <FormLabel>End Date</FormLabel>
+                <FormLabel>End Date (Optional)</FormLabel>
                 <Popover>
                   <PopoverTrigger asChild>
                     <FormControl>
                       <Button
                         variant="outline"
-                        className="w-full pl-3 text-left font-normal"
+                        className={cn(
+                          "w-full pl-3 text-left font-normal",
+                          !field.value && "text-muted-foreground"
+                        )}
                       >
                         {field.value ? (
-                          format(field.value, 'PPP')
+                          format(field.value, "PPP")
                         ) : (
                           <span>Pick a date</span>
                         )}
@@ -203,19 +212,17 @@ export function ProjectForm({ onSubmit, isSubmitting = false, initialData }: Pro
                   <PopoverContent className="w-auto p-0" align="start">
                     <Calendar
                       mode="single"
-                      selected={field.value || undefined}
+                      selected={field.value}
                       onSelect={field.onChange}
+                      disabled={(date) =>
+                        date < form.getValues("start_date")
+                      }
                       initialFocus
-                      disabled={(date) => {
-                        // Disable dates before start date
-                        const startDate = form.getValues('start_date');
-                        return startDate && date < startDate;
-                      }}
                     />
                   </PopoverContent>
                 </Popover>
                 <FormDescription>
-                  When do you expect the project to be completed? (Optional)
+                  When is the project due?
                 </FormDescription>
                 <FormMessage />
               </FormItem>
@@ -223,15 +230,12 @@ export function ProjectForm({ onSubmit, isSubmitting = false, initialData }: Pro
           />
         </div>
 
-        <div className="flex justify-end space-x-4 pt-4">
-          <Button type="button" variant="outline" onClick={() => window.history.back()}>
-            Cancel
-          </Button>
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isSubmitting ? 'Creating...' : 'Create Project'}
-          </Button>
-        </div>
+        <Button type="submit" disabled={isSubmitting || externalIsSubmitting}>
+          {(isSubmitting || externalIsSubmitting) && (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          )}
+          {initialData ? 'Update Project' : 'Create Project'}
+        </Button>
       </form>
     </Form>
   );

@@ -85,18 +85,8 @@ export default async function ProjectsPage() {
           </div>
         )}
 
-        {/* Debug information panel */}
-        <div className="bg-gray-100 p-4 rounded-md mb-4 text-sm">
-          <p>
-            <strong>Debug Info:</strong>
-          </p>
-          <p>User ID: {userId || "Not logged in"}</p>
-          <p>Projects count: {projects?.length || 0}</p>
-        </div>
-
         {projects.length > 0 && <ProjectList projects={projects} />}
       </div>
     </DashboardLayout>
   );
 }
-

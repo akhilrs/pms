@@ -26,12 +26,10 @@ type Props = {
   };
 };
 
-export async function generateMetadata(
-  props: Props
-): Promise<Metadata> {
+export async function generateMetadata(props: Props): Promise<Metadata> {
   // Safely access params
   const projectId = props.params?.id;
-  
+
   try {
     const { data: project } = await getProject(projectId);
     return {
@@ -52,7 +50,7 @@ export async function generateMetadata(
 export default async function ProjectDetailPage(props: Props) {
   // Safely access params
   const projectId = props.params?.id;
-  
+
   console.log("Project detail page - Project ID:", projectId);
 
   // Get the user session for potential permissions checks
@@ -442,3 +440,4 @@ function renderProject(project: any) {
     </DashboardLayout>
   );
 }
+

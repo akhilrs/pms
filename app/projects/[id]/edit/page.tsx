@@ -1,0 +1,82 @@
+import { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { DashboardLayout } from "@/components/layouts/dashboard-layout";
+import { EditProjectForm } from "@/components/projects/edit-project-form";
+import { getProject } from "@/lib/supabase/projects";
+
+type Props = {
+  params: {
+    id: string;
+  };
+};
+
+export async function generateMetadata(props: Props): Promise<Metadata> {
+  try {
+    const projectId = props.params?.id;
+    const { data: project } = await getProject(projectId);
+    return {
+      title: `Edit ${project.name} | Basecamp`,
+      description: `Edit project details for ${project.name}`,
+    };
+  } catch (error) {
+    return {
+      title: "Edit Project | Basecamp",
+      description: "Edit project details",
+    };
+  }
+}
+
+export default async function EditProjectPage(props: Props) {
+  try {
+    const projectId = props.params?.id;
+    const { data: project } = await getProject(projectId);
+
+    if (!project) {
+      notFound();
+    }
+
+    const initialData = {
+      name: project.name,
+      description: project.description || "",
+      status: project.status,
+      start_date: project.start_date ? new Date(project.start_date) : undefined,
+      end_date: project.end_date ? new Date(project.end_date) : undefined,
+    };
+
+    return (
+      <DashboardLayout>
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-2xl font-semibold">Edit Project</h1>
+            <p className="text-muted-foreground">
+              Update the details of your project
+            </p>
+          </div>
+          <EditProjectForm projectId={projectId} initialData={initialData} />
+        </div>
+      </DashboardLayout>
+    );
+  } catch (error) {
+    console.error("Error loading project:", error);
+    return (
+      <DashboardLayout>
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-2xl font-semibold">Edit Project</h1>
+            <p className="text-muted-foreground">
+              Update the details of your project
+            </p>
+          </div>
+          <div className="rounded-lg border border-destructive p-4">
+            <p className="text-destructive">
+              {error instanceof Error
+                ? error.message
+                : "Failed to load project"}
+            </p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+}
+
