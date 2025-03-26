@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { DashboardLayout } from "@/components/layouts/dashboard-layout";
+import { DashboardLayout } from "@/components/common";
 import { EditProjectForm } from "@/components/projects/edit-project-form";
 import { getProject } from "@/lib/supabase/projects";
 
@@ -45,14 +45,19 @@ export default async function EditProjectPage(props: Props) {
 
     return (
       <DashboardLayout>
-        <div className="space-y-6">
-          <div>
-            <h1 className="text-2xl font-semibold">Edit Project</h1>
-            <p className="text-muted-foreground">
-              Update the details of your project
-            </p>
+        <div className="max-w-3xl mx-auto">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+            <div className="p-6">
+              <h1 className="text-2xl font-bold">Edit Project</h1>
+              <p className="text-gray-600 mb-6">
+                Update the details of your project
+              </p>
+              <EditProjectForm
+                projectId={projectId}
+                initialData={initialData}
+              />
+            </div>
           </div>
-          <EditProjectForm projectId={projectId} initialData={initialData} />
         </div>
       </DashboardLayout>
     );
@@ -60,23 +65,24 @@ export default async function EditProjectPage(props: Props) {
     console.error("Error loading project:", error);
     return (
       <DashboardLayout>
-        <div className="space-y-6">
-          <div>
-            <h1 className="text-2xl font-semibold">Edit Project</h1>
-            <p className="text-muted-foreground">
-              Update the details of your project
-            </p>
-          </div>
-          <div className="rounded-lg border border-destructive p-4">
-            <p className="text-destructive">
-              {error instanceof Error
-                ? error.message
-                : "Failed to load project"}
-            </p>
+        <div className="max-w-3xl mx-auto">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+            <div className="p-6">
+              <h1 className="text-2xl font-bold">Edit Project</h1>
+              <p className="text-gray-600 mb-6">
+                Update the details of your project
+              </p>
+              <div className="bg-red-100 p-4 rounded-md">
+                <p className="text-red-600 font-semibold">
+                  {error instanceof Error
+                    ? error.message
+                    : "Failed to load project"}
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </DashboardLayout>
     );
   }
 }
-
