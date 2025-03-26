@@ -378,4 +378,3 @@ export async function deleteProject(
     return { error: err as PostgrestError };
   }
 }
-

@@ -5,18 +5,18 @@ import { EditProjectForm } from "@/components/projects/edit-project-form";
 import { getProject } from "@/lib/supabase/projects";
 
 type Props = {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 };
 
-export async function generateMetadata(props: Props): Promise<Metadata> {
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
   try {
-    const projectId = props.params?.id;
-    const { data: project } = await getProject(projectId);
+    const { id } = await params;
+    const { data: project } = await getProject(id);
     return {
-      title: `Edit ${project.name} | Basecamp`,
-      description: `Edit project details for ${project.name}`,
+      title: `Edit ${project?.name} | Basecamp`,
+      description: `Edit project details for ${project?.name}`,
     };
   } catch (error) {
     return {
@@ -26,10 +26,10 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   }
 }
 
-export default async function EditProjectPage(props: Props) {
+export default async function EditProjectPage({ params }: Props) {
   try {
-    const projectId = props.params?.id;
-    const { data: project } = await getProject(projectId);
+    const { id } = await params;
+    const { data: project } = await getProject(id);
 
     if (!project) {
       notFound();
@@ -53,7 +53,7 @@ export default async function EditProjectPage(props: Props) {
                 Update the details of your project
               </p>
               <EditProjectForm
-                projectId={projectId}
+                projectId={id}
                 initialData={initialData}
               />
             </div>

@@ -21,17 +21,17 @@ import { getServiceSupabase } from "@/lib/supabase/client";
 import { getServerSession } from "@/lib/supabase/server-auth";
 
 type Props = {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 };
 
-export async function generateMetadata(props: Props): Promise<Metadata> {
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // Safely access params
-  const projectId = props.params?.id;
+  const { id } = await params;
 
   try {
-    const { data: project } = await getProject(projectId);
+    const { data: project } = await getProject(id);
     return {
       title: project
         ? `${project.name} | Basecamp Clone`
@@ -47,11 +47,11 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   }
 }
 
-export default async function ProjectDetailPage(props: Props) {
+export default async function ProjectDetailPage({ params }: Props) {
   // Safely access params
-  const projectId = props.params?.id;
+  const { id } = await params;
 
-  console.log("Project detail page - Project ID:", projectId);
+  console.log("Project detail page - Project ID:", id);
 
   // Get the user session for potential permissions checks
   const session = await getServerSession();
@@ -64,7 +64,7 @@ export default async function ProjectDetailPage(props: Props) {
 
   try {
     // Try regular project fetching first
-    const { data: project, error } = await getProject(projectId);
+    const { data: project, error } = await getProject(id);
 
     // If no project found with regular fetch, try using service role
     if (!project && !error) {
@@ -75,7 +75,7 @@ export default async function ProjectDetailPage(props: Props) {
       const { data: serviceProject, error: serviceError } = await supabase
         .from("projects")
         .select("*")
-        .eq("id", projectId)
+        .eq("id", id)
         .single();
 
       if (serviceError) {
