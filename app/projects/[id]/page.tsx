@@ -19,6 +19,7 @@ import { ProjectDeleteButton } from "@/components/projects/project-delete-button
 import { getProject } from "@/lib/supabase/projects";
 import { getServiceSupabase } from "@/lib/supabase/client";
 import { getServerSession } from "@/lib/supabase/server-auth";
+import { ProjectFilesWrapper } from "@/components/files";
 
 type Props = {
   params: Promise<{
@@ -146,7 +147,7 @@ export default async function ProjectDetailPage({ params }: Props) {
   }
 }
 
-function renderProject(project: any) {
+async function renderProject(project: any) {
   // Calculate days remaining if end date exists
   const daysRemaining = project.end_date
     ? Math.ceil(
@@ -392,13 +393,7 @@ function renderProject(project: any) {
                 <CardDescription>Manage files for this project</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-12 text-gray-500">
-                  <p>No files uploaded yet</p>
-                  <p className="text-sm mt-2">
-                    Upload files to share with the team
-                  </p>
-                  <Button className="mt-4">Upload File</Button>
-                </div>
+                <ProjectFilesWrapper projectId={project.id} />
               </CardContent>
             </Card>
           </TabsContent>

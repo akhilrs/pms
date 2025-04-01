@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { DashboardLayout } from "@/components/common";
 import { EditProjectForm } from "@/components/projects/edit-project-form";
 import { getProject } from "@/lib/supabase/projects";
+import { getServerSession } from "@/lib/supabase/server-auth";
 
 type Props = {
   params: Promise<{
@@ -30,7 +31,11 @@ export default async function EditProjectPage({ params }: Props) {
   try {
     const { id } = await params;
     const { data: project } = await getProject(id);
+    const session = await getServerSession();
 
+    const userId = session?.user?.id;
+
+    console.log("Edit page - User authenticated: ", userId);
     if (!project) {
       notFound();
     }
@@ -52,10 +57,7 @@ export default async function EditProjectPage({ params }: Props) {
               <p className="text-gray-600 mb-6">
                 Update the details of your project
               </p>
-              <EditProjectForm
-                projectId={id}
-                initialData={initialData}
-              />
+              <EditProjectForm projectId={id} initialData={initialData} />
             </div>
           </div>
         </div>

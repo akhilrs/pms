@@ -30,20 +30,12 @@ export default async function DashboardPage() {
     const session = await getServerSession();
     if (session?.user) {
       userId = session.user.id;
-      console.log(
-        "Dashboard page - Got user from enhanced session check:",
-        userId,
-      );
     } else {
       // Try the standard method as fallback
       const {
         data: { session: standardSession },
       } = await supabase.auth.getSession();
       userId = standardSession?.user?.id;
-      console.log(
-        "Dashboard page - Got user from standard session method:",
-        userId || "not logged in",
-      );
     }
   } catch (error) {
     console.error("Error getting user session:", error);
@@ -253,4 +245,3 @@ function getStatusColor(status: string): string {
       return "bg-gray-50 text-gray-700 border-gray-300";
   }
 }
-

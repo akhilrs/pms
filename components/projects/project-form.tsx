@@ -1,33 +1,57 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { format } from 'date-fns';
-import { CalendarIcon, Loader2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { format } from "date-fns";
+import { CalendarIcon, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
-import { Button } from '@/components/ui/button';
-import { Calendar } from '@/components/ui/calendar';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 
 // Define form schema with Zod
 const formSchema = z.object({
   name: z
     .string()
-    .min(3, { message: 'Project name must be at least 3 characters' })
-    .max(100, { message: 'Project name must be less than 100 characters' }),
+    .min(3, { message: "Project name must be at least 3 characters" })
+    .max(100, { message: "Project name must be less than 100 characters" }),
   description: z
     .string()
-    .max(500, { message: 'Description must be less than 500 characters' })
+    .max(500, { message: "Description must be less than 500 characters" })
     .optional(),
-  status: z.enum(['Planning', 'In Progress', 'On Hold', 'Completed', 'Canceled']),
+  status: z.enum([
+    "Planning",
+    "In Progress",
+    "On Hold",
+    "Completed",
+    "Canceled",
+  ]),
   start_date: z.date(),
   end_date: z.date().optional(),
 });
@@ -40,15 +64,19 @@ interface ProjectFormProps {
   initialData?: Partial<ProjectFormValues>;
 }
 
-export function ProjectForm({ onSubmit, isSubmitting: externalIsSubmitting, initialData }: ProjectFormProps) {
+export function ProjectForm({
+  onSubmit,
+  isSubmitting: externalIsSubmitting,
+  initialData,
+}: ProjectFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<ProjectFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: initialData?.name || '',
-      description: initialData?.description || '',
-      status: initialData?.status || 'Planning',
+      name: initialData?.name || "",
+      description: initialData?.description || "",
+      status: initialData?.status || "Planning",
       start_date: initialData?.start_date || new Date(),
       end_date: initialData?.end_date,
     },
@@ -56,14 +84,16 @@ export function ProjectForm({ onSubmit, isSubmitting: externalIsSubmitting, init
 
   const handleSubmit = async (data: ProjectFormValues) => {
     if (isSubmitting || externalIsSubmitting) return;
-    
+
     try {
       setIsSubmitting(true);
       await onSubmit(data);
-      toast.success('Project saved successfully');
+      // toast.success('Project saved successfully');
     } catch (error) {
-      console.error('Form submission error:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to save project');
+      console.error("Form submission error:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to save project",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -152,7 +182,7 @@ export function ProjectForm({ onSubmit, isSubmitting: externalIsSubmitting, init
                         variant="outline"
                         className={cn(
                           "w-full pl-3 text-left font-normal",
-                          !field.value && "text-muted-foreground"
+                          !field.value && "text-muted-foreground",
                         )}
                       >
                         {field.value ? (
@@ -176,9 +206,7 @@ export function ProjectForm({ onSubmit, isSubmitting: externalIsSubmitting, init
                     />
                   </PopoverContent>
                 </Popover>
-                <FormDescription>
-                  When does the project start?
-                </FormDescription>
+                <FormDescription>When does the project start?</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -197,7 +225,7 @@ export function ProjectForm({ onSubmit, isSubmitting: externalIsSubmitting, init
                         variant="outline"
                         className={cn(
                           "w-full pl-3 text-left font-normal",
-                          !field.value && "text-muted-foreground"
+                          !field.value && "text-muted-foreground",
                         )}
                       >
                         {field.value ? (
@@ -214,16 +242,12 @@ export function ProjectForm({ onSubmit, isSubmitting: externalIsSubmitting, init
                       mode="single"
                       selected={field.value}
                       onSelect={field.onChange}
-                      disabled={(date) =>
-                        date < form.getValues("start_date")
-                      }
+                      disabled={(date) => date < form.getValues("start_date")}
                       initialFocus
                     />
                   </PopoverContent>
                 </Popover>
-                <FormDescription>
-                  When is the project due?
-                </FormDescription>
+                <FormDescription>When is the project due?</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -234,9 +258,10 @@ export function ProjectForm({ onSubmit, isSubmitting: externalIsSubmitting, init
           {(isSubmitting || externalIsSubmitting) && (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           )}
-          {initialData ? 'Update Project' : 'Create Project'}
+          {initialData ? "Update Project" : "Create Project"}
         </Button>
       </form>
     </Form>
   );
-} 
+}
+

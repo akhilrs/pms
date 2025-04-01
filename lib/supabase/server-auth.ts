@@ -1,9 +1,4 @@
-import {
-  createServerClient,
-  getSession,
-  getUser,
-  requireAuth,
-} from "./auth-helpers";
+import { getSession, requireAuth } from "./auth-helpers";
 import { cookies } from "next/headers";
 import { supabase } from "./client";
 
@@ -87,4 +82,3 @@ export async function getAuthenticatedUser() {
  * Requires authentication, throws if not authenticated
  */
 export { requireAuth };
-

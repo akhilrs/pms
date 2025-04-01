@@ -32,8 +32,6 @@ export async function getUserProjects(userId: string): Promise<{
   data: ProjectWithDetails[] | null;
   error: PostgrestError | null;
 }> {
-  console.log(`getUserProjects called with userId: ${userId}`);
-
   if (!userId) {
     console.log("getUserProjects: No userId provided");
     return { data: null, error: null };
@@ -44,7 +42,6 @@ export async function getUserProjects(userId: string): Promise<{
     const supabase = await createServerClient();
 
     // First, get projects owned by the user
-    console.log("Fetching projects owned by the user...");
     const { data: ownedProjects, error: ownedError } = await supabase
       .from("projects")
       .select("*")
@@ -54,9 +51,6 @@ export async function getUserProjects(userId: string): Promise<{
       console.error("Error fetching owned projects:", ownedError);
       return { data: null, error: ownedError };
     }
-
-    // Get projects where the user is a member - WITH MODIFIED APPROACH
-    console.log("Fetching projects where user is a member...");
 
     let memberProjectIds = [];
     let memberError = null;
@@ -84,11 +78,6 @@ export async function getUserProjects(userId: string): Promise<{
     // Get the actual project data for member projects
     let memberProjectData: Project[] = [];
     if (memberProjectIds.length > 0) {
-      console.log(
-        `Found ${memberProjectIds.length} projects where user is a member:`,
-        memberProjectIds,
-      );
-
       try {
         const { data: projects, error: projectsError } = await supabase
           .from("projects")
@@ -109,7 +98,6 @@ export async function getUserProjects(userId: string): Promise<{
       }
     }
 
-    // Combine owned and member projects, remove duplicates
     const allProjectsMap = new Map<string, Project>();
 
     // Add owned projects
@@ -125,7 +113,6 @@ export async function getUserProjects(userId: string): Promise<{
     });
 
     const allProjects = Array.from(allProjectsMap.values());
-    console.log(`Combined total of ${allProjects.length} projects`);
 
     // Collect all owner IDs to fetch user profiles
     const ownerIds = allProjects
