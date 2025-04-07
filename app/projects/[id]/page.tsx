@@ -20,6 +20,7 @@ import { getProject } from "@/lib/supabase/projects";
 import { getServiceSupabase } from "@/lib/supabase/client";
 import { getServerSession } from "@/lib/supabase/server-auth";
 import { ProjectFilesWrapper } from "@/components/files";
+import { ProjectMessagesWrapper } from "@/components/messages";
 
 type Props = {
   params: Promise<{
@@ -404,13 +405,7 @@ async function renderProject(project: any) {
                 <CardDescription>Team communication</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-12 text-gray-500">
-                  <p>No messages yet</p>
-                  <p className="text-sm mt-2">
-                    Start a conversation with your team
-                  </p>
-                  <Button className="mt-4">New Message</Button>
-                </div>
+                <ProjectMessagesWrapper projectId={project.id} />
               </CardContent>
             </Card>
           </TabsContent>

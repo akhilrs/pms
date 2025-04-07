@@ -3,12 +3,45 @@
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { Database } from "@/types/supabase";
 import { User } from "@supabase/supabase-js";
+import { useState, useEffect } from "react";
 
 // Create a client component Supabase client
 const supabase = createClientComponentClient<Database>();
 
 // Type definitions for backward compatibility
 export type AuthUser = User;
+
+// Hook to get and listen for user auth state changes
+export function useUser() {
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Get the current user
+    const getInitialUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+      setIsLoading(false);
+    };
+
+    getInitialUser();
+
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setUser(session?.user ?? null);
+        setIsLoading(false);
+      }
+    );
+
+    // Clean up subscription on unmount
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  return { user, isLoading };
+}
 
 export interface UserProfile {
   id: string;
