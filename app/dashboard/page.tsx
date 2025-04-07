@@ -15,6 +15,7 @@ import { getUserProjects } from "@/lib/supabase/projects";
 import { supabase, getServiceSupabase } from "@/lib/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { getServerSession } from "@/lib/supabase/server-auth";
+import { UpdateProfileForm } from "@/components/auth/update-profile-form";
 
 export const metadata: Metadata = {
   title: "Dashboard | Basecamp Clone",
@@ -208,20 +209,25 @@ export default async function DashboardPage() {
               )}
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>My Tasks</CardTitle>
-              <CardDescription>Tasks assigned to you</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-6 text-gray-500">
-                <p>No tasks assigned</p>
-                <p className="text-sm mt-2">
-                  Tasks assigned to you will appear here
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>My Tasks</CardTitle>
+                <CardDescription>Tasks assigned to you</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-6 text-gray-500">
+                  <p>No tasks assigned</p>
+                  <p className="text-sm mt-2">
+                    Tasks assigned to you will appear here
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+            
+            {/* Profile Update Form - helps resolve the "Unknown User" issue */}
+            <UpdateProfileForm />
+          </div>
         </div>
       </div>
     </DashboardLayout>

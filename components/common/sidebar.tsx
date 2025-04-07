@@ -9,7 +9,8 @@ import {
   MessageSquare, 
   BarChart, 
   Settings, 
-  Users 
+  Users, 
+  UserCircle 
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -28,6 +29,7 @@ export function Sidebar({ isOpen }: SidebarProps) {
     { name: 'Messages', href: '/messages', icon: MessageSquare },
     { name: 'Reports', href: '/reports', icon: BarChart },
     { name: 'Team', href: '/team', icon: Users },
+    { name: 'Profile', href: '/profile', icon: UserCircle },
     { name: 'Settings', href: '/settings', icon: Settings },
   ];
 

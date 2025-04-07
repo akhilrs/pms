@@ -214,19 +214,23 @@ export async function getProject(
     let ownerData = null;
     if (projectData.owner_id) {
       try {
+        // Get owner profile data - the key is that profile.id is the auth user ID 
+        // and profile.user_id points to the same auth user ID
         const { data: ownerProfile } = await supabase
           .from("profiles")
           .select("id, user_id, first_name, last_name, avatar_url")
           .eq("user_id", projectData.owner_id)
           .single();
 
+        console.log("Owner profile data:", ownerProfile);
         if (ownerProfile) {
           ownerData = {
             id: projectData.owner_id,
-            first_name: ownerProfile.first_name,
-            last_name: ownerProfile.last_name,
+            first_name: ownerProfile.first_name || '',
+            last_name: ownerProfile.last_name || '',
             avatar_url: ownerProfile.avatar_url,
           };
+          console.log("Constructed owner data:", ownerData);
         }
       } catch (error) {
         console.warn("Error fetching owner profile:", error);

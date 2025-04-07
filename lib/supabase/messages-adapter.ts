@@ -46,7 +46,7 @@ export function useProjectMessages() {
       const { data: profilesData, error: profilesError } = await supabase
         .from("profiles")
         .select("*")
-        .in("id", userIds);
+        .in("user_id", userIds);
 
       if (profilesError) {
         console.error("Error fetching user profiles:", profilesError);
@@ -54,13 +54,20 @@ export function useProjectMessages() {
 
       // Map profiles to messages
       const messagesWithUsers = messagesData.map(message => {
-        const userProfile = profilesData?.find(profile => profile.id === message.user_id) || null;
+        // Since both id and user_id are the same in the profiles table (both are the auth user ID),
+        // we need to check for either field matching the message's user_id
+        const userProfile = profilesData?.find(profile => 
+          profile.id === message.user_id || profile.user_id === message.user_id
+        ) || null;
+        
+        console.log(`Message ${message.id} user data:`, userProfile);
+        
         return {
           ...message,
           user: userProfile ? {
-            id: userProfile.id,
-            first_name: userProfile.first_name,
-            last_name: userProfile.last_name,
+            id: userProfile.id, // Use the ID that matches the auth user ID
+            first_name: userProfile.first_name || '',
+            last_name: userProfile.last_name || '',
             avatar_url: userProfile.avatar_url
           } : null
         };
@@ -114,7 +121,7 @@ export function useProjectMessages() {
       const { data: userProfile, error: profileError } = await supabase
         .from("profiles")
         .select("*")
-        .eq("id", userData.user.id)
+        .eq("user_id", userData.user.id)
         .single();
         
       if (profileError) {
@@ -194,13 +201,21 @@ export function useProjectMessages() {
             const { data: userData } = await supabase
               .from("profiles")
               .select("*")
-              .eq("id", messageData.user_id)
+              .eq("user_id", messageData.user_id)
               .single();
 
+            // Log the user data for debugging  
+            console.log("Realtime message user data:", userData);
+            
             // Combine the message with user data
             const enrichedMessage = {
               ...messageData,
-              user: userData || null
+              user: userData ? {
+                id: userData.id, // Use the ID that matches the auth user ID
+                first_name: userData.first_name || '',
+                last_name: userData.last_name || '',
+                avatar_url: userData.avatar_url
+              } : null
             };
 
             callback(enrichedMessage);
