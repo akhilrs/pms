@@ -26,3 +26,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `/components`: Reusable React components
 - `/lib`: Utilities and service clients (Supabase)
 - `/public`: Static assets
+
+## Architecture Patterns
+- **Server/Client Boundary**: Follow React Server Components pattern - server components fetch data, client components handle interactivity
+- **Server Actions**: Use server actions in `app/*/actions.ts` files for data mutations
+- **Service Role**: Use `getServiceSupabase()` when you need to bypass RLS policies (use sparingly)
+- **Component Pattern**: For interactive sections that use server actions:
+  1. Create a client component (`'use client'`) that handles the UI and interactivity
+  2. Create local handler functions that invoke server actions
+  3. Use this client component from server components to maintain proper boundaries
+
+## Common Issues & Solutions
+- **Event Handler Error**: "Event handlers cannot be passed to Client Component props" means you're trying to pass server actions directly to client components. Create a client wrapper component that invokes the server actions instead.
+- **RLS Policies**: When adding records that need permission to add themselves (like team members), use the service role client to bypass RLS temporarily.
+- **TeamForm vs ProjectForm**: TeamForm doesn't use a Card wrapper, while ProjectForm is styled without Card. The parent component should provide any Card wrappers.

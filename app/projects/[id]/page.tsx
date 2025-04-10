@@ -302,9 +302,24 @@ async function renderProject(project: any) {
                   <Button variant="outline" size="sm" asChild>
                     <Link href={`/projects/${project.id}/members`}>
                       <Users className="h-4 w-4 mr-2" />
-                      Manage Team
+                      Manage Members
                     </Link>
                   </Button>
+                </div>
+                
+                <div className="border-t pt-4 mt-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-sm font-medium">Assigned Teams</div>
+                    <Button variant="ghost" size="sm" asChild>
+                      <Link href={`/projects/${project.id}/teams`}>
+                        <Users className="h-4 w-4 mr-1" />
+                        Manage Teams
+                      </Link>
+                    </Button>
+                  </div>
+                  <div className="text-xs text-gray-500 italic">
+                    Assign teams to this project to give team members access
+                  </div>
                 </div>
 
                 <div className="flex flex-wrap gap-2">

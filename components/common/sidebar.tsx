@@ -25,11 +25,11 @@ export function Sidebar({ isOpen }: SidebarProps) {
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Projects', href: '/projects', icon: FolderKanban },
+    { name: 'Teams', href: '/teams', icon: Users },
     { name: 'My Tasks', href: '/tasks', icon: CheckSquare },
     { name: 'Documents', href: '/documents', icon: FileText },
     { name: 'Messages', href: '/messages', icon: MessageSquare },
     { name: 'Reports', href: '/reports', icon: BarChart },
-    { name: 'Team', href: '/team', icon: Users },
     { name: 'Profile', href: '/profile', icon: UserCircle },
     { name: 'Settings', href: '/settings', icon: Settings },
   ];

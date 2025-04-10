@@ -9,6 +9,116 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
+      teams: {
+        Row: {
+          id: string
+          name: string
+          description: string | null
+          created_by: string
+          created_at: string
+          updated_at: string
+          avatar_url: string | null
+        }
+        Insert: {
+          id?: string
+          name: string
+          description?: string | null
+          created_by: string
+          created_at?: string
+          updated_at?: string
+          avatar_url?: string | null
+        }
+        Update: {
+          id?: string
+          name?: string
+          description?: string | null
+          created_by?: string
+          created_at?: string
+          updated_at?: string
+          avatar_url?: string | null
+        }
+      }
+      team_members: {
+        Row: {
+          id: string
+          team_id: string
+          user_id: string
+          role: 'owner' | 'admin' | 'member'
+          joined_at: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          team_id: string
+          user_id: string
+          role?: 'owner' | 'admin' | 'member'
+          joined_at?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          team_id?: string
+          user_id?: string
+          role?: 'owner' | 'admin' | 'member'
+          joined_at?: string
+          created_at?: string
+        }
+      }
+      project_teams: {
+        Row: {
+          id: string
+          project_id: string
+          team_id: string
+          created_at: string
+          created_by: string
+        }
+        Insert: {
+          id?: string
+          project_id: string
+          team_id: string
+          created_at?: string
+          created_by: string
+        }
+        Update: {
+          id?: string
+          project_id?: string
+          team_id?: string
+          created_at?: string
+          created_by?: string
+        }
+      }
+      team_invitations: {
+        Row: {
+          id: string
+          team_id: string
+          email: string
+          role: 'admin' | 'member'
+          invited_by: string
+          token: string
+          expires_at: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          team_id: string
+          email: string
+          role: 'admin' | 'member'
+          invited_by: string
+          token?: string
+          expires_at: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          team_id?: string
+          email?: string
+          role?: 'admin' | 'member'
+          invited_by?: string
+          token?: string
+          expires_at?: string
+          created_at?: string
+        }
+      }
       profiles: {
         Row: {
           id: string
@@ -77,6 +187,7 @@ export interface Database {
           user_id: string
           role: 'owner' | 'admin' | 'member'
           joined_at: string
+          team_id: string | null
         }
         Insert: {
           id?: string
@@ -84,12 +195,14 @@ export interface Database {
           user_id: string
           role?: 'owner' | 'admin' | 'member'
           joined_at?: string
+          team_id?: string | null
         }
         Update: {
           id?: string
           project_id?: string
           user_id?: string
           role?: 'owner' | 'admin' | 'member'
+          team_id?: string | null
           joined_at?: string
         }
       }
