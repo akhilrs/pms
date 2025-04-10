@@ -3,11 +3,12 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthGuard } from "@/components/auth/auth-guard";
 import { Toaster } from "sonner";
+import { APP_NAME } from "@/lib/constants";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Basecamp Clone",
+  title: APP_NAME,
   description: "A project management application similar to Basecamp",
 };
 

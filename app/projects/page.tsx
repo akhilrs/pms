@@ -1,5 +1,6 @@
 // app/projects/page.tsx
 import { Metadata } from "next";
+import { APP_NAME } from "@/lib/constants";
 import Link from "next/link";
 import { PlusCircle } from "lucide-react";
 import { DashboardLayout } from "@/components/common";
@@ -9,7 +10,7 @@ import { getUserProjects } from "@/lib/supabase/projects";
 import { getUser } from "@/lib/supabase/auth-helpers";
 
 export const metadata: Metadata = {
-  title: "Projects | Basecamp Clone",
+  title: `Projects | ${APP_NAME}`,
   description: "Manage your projects",
 };
 

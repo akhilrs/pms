@@ -1,10 +1,11 @@
 import { Metadata } from "next";
+import { APP_NAME } from "@/lib/constants";
 import { DashboardLayout } from "@/components/common/layout";
 import { UpdateProfileForm } from "@/components/auth/update-profile-form";
 import { FixProfiles } from "@/components/auth/fix-profiles";
 
 export const metadata: Metadata = {
-  title: "Profile | Basecamp Clone",
+  title: `Profile | ${APP_NAME}`,
   description: "Manage your profile",
 };
 

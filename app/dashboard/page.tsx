@@ -1,4 +1,5 @@
 import { Metadata } from "next";
+import { APP_NAME } from "@/lib/constants";
 import Link from "next/link";
 import { DashboardLayout } from "@/components/common/layout";
 import {
@@ -18,7 +19,7 @@ import { getServerSession } from "@/lib/supabase/server-auth";
 import { UpdateProfileForm } from "@/components/auth/update-profile-form";
 
 export const metadata: Metadata = {
-  title: "Dashboard | Basecamp Clone",
+  title: `Dashboard | ${APP_NAME}`,
   description: "Project management dashboard",
 };
 
@@ -86,7 +87,7 @@ export default async function DashboardPage() {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold">Welcome to Basecamp Clone</h1>
+            <h1 className="text-3xl font-bold">Welcome to {APP_NAME}</h1>
             <p className="text-gray-600">
               Your project management hub. Get started by creating a new project
               or checking your tasks.

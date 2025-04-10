@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { APP_NAME } from "@/lib/constants";
 import { getCurrentUser, signOut, getUserProfile } from "@/lib/supabase/auth";
 import { AuthUser, UserProfile } from "@/lib/supabase/auth";
 import { Button } from "@/components/ui/button";
@@ -109,7 +110,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     ? "Project Details"
                     : pathname === "/projects"
                       ? "Projects"
-                      : "Basecamp Clone"}
+                      : APP_NAME}
               </h1>
             </div>
 

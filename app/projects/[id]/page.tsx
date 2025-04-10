@@ -1,4 +1,5 @@
 import { Metadata } from "next";
+import { APP_NAME } from "@/lib/constants";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { format } from "date-fns";
@@ -36,14 +37,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const { data: project } = await getProject(id);
     return {
       title: project
-        ? `${project.name} | Basecamp Clone`
-        : "Project Details | Basecamp Clone",
+        ? `${project.name} | ${APP_NAME}`
+        : `Project Details | ${APP_NAME}`,
       description: project?.description || "View project details",
     };
   } catch (error) {
     console.error("Error generating metadata:", error);
     return {
-      title: "Project Details | Basecamp Clone",
+      title: `Project Details | ${APP_NAME}`,
       description: "View project details",
     };
   }

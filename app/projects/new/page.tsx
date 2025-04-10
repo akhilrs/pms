@@ -1,12 +1,13 @@
 import { Metadata } from 'next';
+import { APP_NAME } from '@/lib/constants';
 import { DashboardLayout } from '@/components/common/layout';
 import { getServerSession } from '@/lib/supabase/server-auth';
 import { redirect } from 'next/navigation';
 import { NewProjectForm } from '@/components/projects/new-project-form';
 
 export const metadata: Metadata = {
-  title: 'Create New Project | Basecamp Clone',
-  description: 'Create a new project in your Basecamp Clone',
+  title: `Create New Project | ${APP_NAME}`,
+  description: `Create a new project in your ${APP_NAME}`,
 };
 
 export default async function NewProjectPage() {

@@ -1,6 +1,7 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
+import { APP_NAME, APP_VERSION } from '@/lib/constants';
 import { 
   LayoutDashboard, 
   FolderKanban, 
@@ -48,7 +49,7 @@ export function Sidebar({ isOpen }: SidebarProps) {
     >
       <div className="flex items-center justify-center h-16 border-b">
         <h1 className={`text-xl font-bold ${isOpen ? 'block' : 'hidden'}`}>
-          Basecamp
+          {APP_NAME.split(' ')[0]}
         </h1>
         <span className={`text-2xl font-bold ${isOpen ? 'hidden' : 'block'}`}>
           B
@@ -79,8 +80,8 @@ export function Sidebar({ isOpen }: SidebarProps) {
       </nav>
       <div className="p-4 border-t">
         <div className={`text-xs text-gray-500 ${isOpen ? 'block' : 'hidden'}`}>
-          <p>Basecamp Clone</p>
-          <p>v1.0.0</p>
+          <p>{APP_NAME}</p>
+          <p>{APP_VERSION}</p>
         </div>
       </div>
     </div>
