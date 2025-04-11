@@ -22,6 +22,7 @@ import { getServiceSupabase } from "@/lib/supabase/client";
 import { getServerSession } from "@/lib/supabase/server-auth";
 import { ProjectFilesWrapper } from "@/components/files";
 import { ProjectMessagesWrapper } from "@/components/messages";
+import { ProjectMilestonesWrapper } from "@/components/milestones";
 
 type Props = {
   params: Promise<{
@@ -306,7 +307,7 @@ async function renderProject(project: any) {
                     </Link>
                   </Button>
                 </div>
-                
+
                 <div className="border-t pt-4 mt-4">
                   <div className="flex items-center justify-between mb-2">
                     <div className="text-sm font-medium">Assigned Teams</div>
@@ -375,13 +376,27 @@ async function renderProject(project: any) {
           </Card>
         </div>
 
-        <Tabs defaultValue="tasks">
-          <TabsList className="grid w-full grid-cols-4">
+        <Tabs defaultValue="milestones">
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="milestones">Milestones</TabsTrigger>
             <TabsTrigger value="tasks">Tasks</TabsTrigger>
             <TabsTrigger value="files">Files</TabsTrigger>
             <TabsTrigger value="messages">Messages</TabsTrigger>
             <TabsTrigger value="activity">Activity</TabsTrigger>
           </TabsList>
+          <TabsContent value="milestones" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Milestones</CardTitle>
+                <CardDescription>
+                  Track major project phases and organize tasks
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ProjectMilestonesWrapper projectId={project.id} />
+              </CardContent>
+            </Card>
+          </TabsContent>
           <TabsContent value="tasks" className="mt-6">
             <Card>
               <CardHeader>
