@@ -22,15 +22,18 @@ export function ProjectList({ projects, isLoading = false }: ProjectListProps) {
 
   if (projects.length === 0) {
     return (
-      <div className="text-center py-12 border rounded-lg bg-gray-50">
-        <h3 className="text-lg font-medium text-gray-900 mb-2">No projects yet</h3>
-        <p className="text-gray-500 mb-6">
-          Create your first project to get started with project management.
+      <div className="flex flex-col items-center justify-center py-16 border-2 border-dashed rounded-lg bg-gray-50/50">
+        <div className="bg-primary/10 p-4 rounded-full mb-4">
+          <PlusCircle className="h-10 w-10 text-primary" />
+        </div>
+        <h3 className="text-xl font-medium text-gray-900 mb-2">No projects yet</h3>
+        <p className="text-gray-500 mb-6 max-w-md text-center">
+          Create your first project to get started with project management and collaboration.
         </p>
-        <Button asChild>
+        <Button size="lg" className="shadow-md hover:shadow-lg transition-all" asChild>
           <Link href="/projects/new">
             <PlusCircle className="h-4 w-4 mr-2" />
-            Create Project
+            Create Your First Project
           </Link>
         </Button>
       </div>

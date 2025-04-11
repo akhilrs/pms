@@ -14,7 +14,7 @@ CREATE POLICY "File uploaders and project admins can delete files" ON storage.ob
 
 CREATE POLICY "Project members can upload files" ON storage.objects FOR INSERT WITH CHECK (((bucket_id = 'project-files'::text) AND (EXISTS ( SELECT 1
    FROM public.project_members pm
-  WHERE ((pm.project_id = ((storage.foldername(objects.name))[1])::uuid) AND (pm.user_id = auth.uid()))))))
+  WHERE ((pm.project_id = ((storage.foldername(objects.name))[1])::uuid) AND (pm.user_id = auth.uid()))))));
 
 
 --

@@ -1,10 +1,9 @@
 import { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { DashboardLayout } from "@/components/common/layout";
-import { TeamForm } from "@/components/teams";
+import { EditTeamForm } from "@/components/teams";
 import { getTeam } from "@/lib/supabase/teams";
 import { getServerSession } from "@/lib/supabase/server-auth";
-import { updateTeam } from "@/app/teams/actions";
 import { APP_NAME } from "@/lib/constants";
 
 type Props = {
@@ -63,30 +62,25 @@ export default async function EditTeamPage({ params }: Props) {
     // User doesn't have permission to edit this team
     redirect(`/teams/${teamId}`);
   }
-  
-  // Handle team update
-  const handleUpdateTeam = async (formData: any) => {
-    return updateTeam(teamId, formData);
-  };
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Edit Team</h1>
-          <p className="text-gray-600">
-            Update details for {team.name}
-          </p>
-        </div>
+      <div className="max-w-3xl mx-auto">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+          <div className="p-6">
+            <h1 className="text-2xl font-bold">Edit Team</h1>
+            <p className="text-gray-600 mb-6">
+              Update details for {team.name}
+            </p>
 
-        <TeamForm
-          team={team}
-          userId={userId}
-          onSubmit={handleUpdateTeam}
-          submitLabel="Save Changes"
-          title="Team Details"
-          description="Update your team's information"
-        />
+            <EditTeamForm
+              team={team}
+              userId={userId}
+              title="Team Details"
+              description="Update your team's information"
+            />
+          </div>
+        </div>
       </div>
     </DashboardLayout>
   );

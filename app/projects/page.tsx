@@ -67,16 +67,6 @@ export default async function ProjectsPage() {
               <Link href="/auth/login">Sign In</Link>
             </Button>
           </div>
-        ) : projects.length === 0 && !error ? (
-          <div className="bg-blue-50 p-4 rounded-md mb-4">
-            <p className="font-semibold">No Projects Found</p>
-            <p className="text-sm text-gray-700 mt-1">
-              Create your first project to get started
-            </p>
-            <Button className="mt-3" asChild>
-              <Link href="/projects/new">Create Project</Link>
-            </Button>
-          </div>
         ) : null}
 
         {error && (
@@ -86,7 +76,7 @@ export default async function ProjectsPage() {
           </div>
         )}
 
-        {projects.length > 0 && <ProjectList projects={projects} />}
+        {!error && userId && <ProjectList projects={projects} />}
       </div>
     </DashboardLayout>
   );
