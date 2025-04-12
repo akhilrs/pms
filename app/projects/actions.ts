@@ -10,6 +10,14 @@ import {
   updateProject,
   deleteProject,
 } from "@/lib/supabase/projects";
+import {
+  getProjectMilestones as getProjectMilestonesServer,
+  createMilestone as createMilestoneServer,
+  updateMilestone as updateMilestoneServer,
+  deleteMilestone as deleteMilestoneServer,
+  assignTaskToMilestone as assignTaskToMilestoneServer,
+  getUnassignedTasks as getUnassignedTasksServer,
+} from "@/lib/supabase/milestones";
 import type { ProjectFormValues } from "@/components/projects/project-form";
 
 // Create a server-side Supabase client
@@ -201,6 +209,113 @@ export async function getProject(id: string) {
     return project;
   } catch (error) {
     console.error("Error in getProject:", error);
+    throw error;
+  }
+}
+
+// Milestone Actions
+export async function getProjectMilestonesAction(projectId: string) {
+  try {
+    // Use direct Supabase client instead of trying to authenticate
+    const result = await getProjectMilestonesServer(projectId);
+    
+    if (result.error) {
+      console.error("Error getting project milestones:", result.error);
+      throw new Error(`Failed to get project milestones: ${result.error.message}`);
+    }
+    
+    return result;
+  } catch (error) {
+    console.error("Error getting project milestones:", error);
+    throw error;
+  }
+}
+
+export async function createMilestoneAction(data: any) {
+  try {
+    // Use direct Supabase client instead of trying to authenticate
+    const result = await createMilestoneServer(data);
+    
+    if (result.error) {
+      console.error("Error creating milestone:", result.error);
+      throw new Error(`Failed to create milestone: ${result.error.message}`);
+    }
+    
+    revalidatePath(`/projects/${data.project_id}`);
+    return result;
+  } catch (error) {
+    console.error("Error creating milestone:", error);
+    throw error;
+  }
+}
+
+export async function updateMilestoneAction(milestoneId: string, data: any, projectId: string) {
+  try {
+    // Use direct Supabase client instead of trying to authenticate
+    const result = await updateMilestoneServer(milestoneId, data);
+    
+    if (result.error) {
+      console.error("Error updating milestone:", result.error);
+      throw new Error(`Failed to update milestone: ${result.error.message}`);
+    }
+    
+    revalidatePath(`/projects/${projectId}`);
+    return result;
+  } catch (error) {
+    console.error("Error updating milestone:", error);
+    throw error;
+  }
+}
+
+export async function deleteMilestoneAction(milestoneId: string, projectId: string) {
+  try {
+    // Use direct Supabase client instead of trying to authenticate
+    const result = await deleteMilestoneServer(milestoneId);
+    
+    if (result.error) {
+      console.error("Error deleting milestone:", result.error);
+      throw new Error(`Failed to delete milestone: ${result.error.message}`);
+    }
+    
+    revalidatePath(`/projects/${projectId}`);
+    return result;
+  } catch (error) {
+    console.error("Error deleting milestone:", error);
+    throw error;
+  }
+}
+
+export async function getUnassignedTasksAction(projectId: string) {
+  try {
+    // Use direct Supabase client instead of trying to authenticate
+    const result = await getUnassignedTasksServer(projectId);
+    
+    if (result.error) {
+      console.error("Error getting unassigned tasks:", result.error);
+      throw new Error(`Failed to get unassigned tasks: ${result.error.message}`);
+    }
+    
+    return result;
+  } catch (error) {
+    console.error("Error getting unassigned tasks:", error);
+    throw error;
+  }
+}
+
+export async function assignTaskToMilestoneAction(taskId: string, milestoneId: string | null, projectId: string) {
+  try {
+    // Use direct Supabase client instead of trying to authenticate
+    const result = await assignTaskToMilestoneServer(taskId, milestoneId);
+    
+    if (result.error) {
+      console.error("Error assigning task to milestone:", result.error);
+      throw new Error(`Failed to assign task to milestone: ${result.error.message}`);
+    }
+    
+    revalidatePath(`/projects/${projectId}`);
+    return result;
+  } catch (error) {
+    console.error("Error assigning task to milestone:", error);
     throw error;
   }
 }

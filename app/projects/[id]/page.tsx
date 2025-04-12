@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { format } from "date-fns";
 import { Calendar, Clock, Edit, Users } from "lucide-react";
 import { DashboardLayout } from "@/components/common/layout";
+import { ReloadButton } from "@/components/common/reload-button";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -139,9 +140,7 @@ export default async function ProjectDetailPage({ params }: Props) {
               <Button variant="outline" asChild>
                 <Link href="/projects">Back to Projects</Link>
               </Button>
-              <Button onClick={() => window.location.reload()}>
-                Try Again
-              </Button>
+              <ReloadButton />
             </div>
           </div>
         </div>

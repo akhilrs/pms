@@ -22,7 +22,7 @@ export async function getProjectMilestones(projectId: string) {
   }
 
   try {
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     // Get milestones for the project
     const { data: milestones, error } = await supabase
@@ -40,25 +40,18 @@ export async function getProjectMilestones(projectId: string) {
     const milestonesWithTasks: MilestoneWithTasks[] = [];
 
     for (const milestone of milestones || []) {
-      // Fetch tasks for this milestone
+      // Fetch tasks for this milestone - without the foreign key relation that's causing issues
       const { data: tasks, error: tasksError } = await supabase
         .from("tasks")
-        .select(
-          `
-          *,
-          assignee:assignee_id (
-            id,
-            first_name,
-            last_name,
-            avatar_url
-          )
-        `,
-        )
+        .select("*")
         .eq("milestone_id", milestone.id);
 
       if (tasksError) {
         console.error("Error fetching tasks for milestone:", tasksError);
       }
+      
+      // If needed, we can fetch assignee details separately once the migration has been applied
+      // This temporary solution allows the application to function until the migration is applied
 
       milestonesWithTasks.push({
         ...milestone,
@@ -83,7 +76,7 @@ export async function getMilestone(milestoneId: string) {
   }
 
   try {
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     // Get the milestone
     const { data: milestone, error } = await supabase
@@ -97,20 +90,10 @@ export async function getMilestone(milestoneId: string) {
       return { data: null, error };
     }
 
-    // Get tasks for this milestone
+    // Get tasks for this milestone - without the foreign key relation that's causing issues
     const { data: tasks, error: tasksError } = await supabase
       .from("tasks")
-      .select(
-        `
-        *,
-        assignee:assignee_id (
-          id,
-          first_name,
-          last_name,
-          avatar_url
-        )
-      `,
-      )
+      .select("*")
       .eq("milestone_id", milestoneId);
 
     if (tasksError) {
@@ -139,7 +122,7 @@ export async function createMilestone(milestoneData: MilestoneInsert) {
   }
 
   try {
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     const { data, error } = await supabase
       .from("milestones")
@@ -172,7 +155,7 @@ export async function updateMilestone(
   }
 
   try {
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     const { data, error } = await supabase
       .from("milestones")
@@ -276,7 +259,7 @@ export async function getUnassignedTasks(projectId: string) {
   }
 
   try {
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     const { data, error } = await supabase
       .from("tasks")

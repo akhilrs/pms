@@ -1,4 +1,4 @@
-// components/milestones/MilestoneForm.tsx
+// components/milestones/milestone-form.tsx
 "use client";
 
 import { useState } from "react";
@@ -97,12 +97,35 @@ export function MilestoneForm({
             <FormItem>
               <FormLabel>Description</FormLabel>
               <FormControl>
-                <Textarea
-                  placeholder="Describe this milestone"
-                  {...field}
-                  value={field.value || ""}
+                <Textarea 
+                  placeholder="Add a description (optional)" 
+                  className="resize-none" 
+                  {...field} 
                 />
               </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="status"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Status</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a status" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="Not Started">Not Started</SelectItem>
+                  <SelectItem value="In Progress">In Progress</SelectItem>
+                  <SelectItem value="Completed">Completed</SelectItem>
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}
@@ -118,10 +141,8 @@ export function MilestoneForm({
                 <PopoverTrigger asChild>
                   <FormControl>
                     <Button
-                      variant={"outline"}
-                      className={`w-full pl-3 text-left font-normal ${
-                        !field.value ? "text-muted-foreground" : ""
-                      }`}
+                      variant="outline"
+                      className={!field.value ? "text-muted-foreground" : ""}
                     >
                       {field.value ? (
                         format(field.value, "PPP")
@@ -146,21 +167,15 @@ export function MilestoneForm({
           )}
         />
 
-        <FormField
-          control={form.control}
-          name="status"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Status</FormLabel>
-              <Select
-                onValueChange={field.onChange}
-                defaultValue={field.value}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="Not Started">Not Started</SelectItem>
-                  <SelectItem value="In
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Saving..." : defaultValues ? "Update" : "Create"}
+          </Button>
+        </div>
+      </form>
+    </Form>
+  );
+}

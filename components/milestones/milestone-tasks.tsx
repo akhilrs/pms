@@ -19,11 +19,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import {
-  assignTaskToMilestone,
-  getUnassignedTasks,
-} from "@/lib/supabase/milestones";
+  assignTaskToMilestoneAction,
+  getUnassignedTasksAction,
+} from "@/app/projects/actions";
 import { MilestoneWithTasks } from "@/lib/supabase/milestones";
 import { format } from "date-fns";
 
@@ -42,22 +42,17 @@ export function MilestoneTasks({
   const [unassignedTasks, setUnassignedTasks] = useState<any[]>([]);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const { toast } = useToast();
 
   const handleOpenAddTask = async () => {
     try {
       setLoading(true);
-      const { data, error } = await getUnassignedTasks(projectId);
+      const { data, error } = await getUnassignedTasksAction(projectId);
 
       if (error) throw error;
       setUnassignedTasks(data);
       setAddTaskDialogOpen(true);
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to load unassigned tasks",
-        variant: "destructive",
-      });
+      toast.error("Failed to load unassigned tasks");
       console.error("Error loading unassigned tasks:", error);
     } finally {
       setLoading(false);
@@ -69,27 +64,21 @@ export function MilestoneTasks({
 
     try {
       setLoading(true);
-      const { error } = await assignTaskToMilestone(
+      const { error } = await assignTaskToMilestoneAction(
         selectedTaskId,
         milestone.id,
+        projectId
       );
 
       if (error) throw error;
 
-      toast({
-        title: "Success",
-        description: "Task added to milestone",
-      });
+      toast.success("Task added to milestone");
 
       setAddTaskDialogOpen(false);
       setSelectedTaskId(null);
       onTasksChange();
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to add task to milestone",
-        variant: "destructive",
-      });
+      toast.error("Failed to add task to milestone");
       console.error("Error adding task to milestone:", error);
     } finally {
       setLoading(false);
@@ -99,22 +88,15 @@ export function MilestoneTasks({
   const handleRemoveTaskFromMilestone = async (taskId: string) => {
     try {
       setLoading(true);
-      const { error } = await assignTaskToMilestone(taskId, null);
+      const { error } = await assignTaskToMilestoneAction(taskId, null, projectId);
 
       if (error) throw error;
 
-      toast({
-        title: "Success",
-        description: "Task removed from milestone",
-      });
+      toast.success("Task removed from milestone");
 
       onTasksChange();
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to remove task from milestone",
-        variant: "destructive",
-      });
+      toast.error("Failed to remove task from milestone");
       console.error("Error removing task from milestone:", error);
     } finally {
       setLoading(false);
