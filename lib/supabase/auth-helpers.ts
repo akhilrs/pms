@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
 import { createServerActionClient } from "@supabase/auth-helpers-nextjs";
+import { createClient } from "@supabase/supabase-js";
 import { Database } from "@/types/supabase";
 
 /**
@@ -66,4 +67,25 @@ export async function requireAuth() {
   }
 
   return user;
+}
+
+/**
+ * Get a Supabase client with service role privileges
+ * This bypasses RLS and should be used carefully
+ */
+export function getServiceSupabase() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+
+  if (!supabaseServiceKey) {
+    console.error("Missing Supabase service role key");
+    throw new Error("Service role key not configured");
+  }
+
+  return createClient<Database>(supabaseUrl, supabaseServiceKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
 }

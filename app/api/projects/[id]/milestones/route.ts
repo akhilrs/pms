@@ -1,31 +1,38 @@
-// app/api/projects/[id]/milestones/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getProjectMilestones } from "@/lib/supabase/milestones";
+import { requireAuth } from "@/lib/supabase/auth-helpers";
 
-// GET - Get all milestones for a project
+// GET /api/projects/[id]/milestones
 export async function GET(
-  request: NextRequest,
-  context: { params: { id: string } }
+  req: NextRequest,
+  { params }: { params: { id: string } },
 ) {
   try {
-    // Extract the ID from the URL path segments to avoid the params.id issue
-    const pathSegments = request.nextUrl.pathname.split('/');
-    // The pattern is /api/projects/:id/milestones, so project ID is the 4th segment
-    const projectId = pathSegments[3];
-    
+    // Extract the id from params first
+    const projectId = params.id;
     console.log("Fetching milestones for project:", projectId);
+
+    // Check if user is authenticated
+    const user = await requireAuth();
+
+    // Get project milestones
     const { data, error } = await getProjectMilestones(projectId);
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json(
+        { error: error.message || "Failed to fetch milestones" },
+        { status: 500 },
+      );
     }
 
     return NextResponse.json({ data });
   } catch (error) {
-    console.error("Error fetching milestones:", error);
+    console.error("Error in milestones GET route:", error);
+
     return NextResponse.json(
-      { error: "Failed to fetch milestones" },
-      { status: 500 },
+      { error: "Unauthorized or server error" },
+      { status: 401 },
     );
   }
 }
+
